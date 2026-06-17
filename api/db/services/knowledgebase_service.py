@@ -1,0 +1,195 @@
+import time
+from datetime import datetime
+from typing import Any
+from uuid import uuid4
+
+from peewee import DoesNotExist
+
+from api.db.db_models import DB, Knowledgebase, connect_db
+from api.db.services.user_service import UserService
+
+DEFAULT_PARSER_CONFIG = {
+    "pages": [[1, 1000000]],
+    "table_context_size": 0,
+    "image_context_size": 0,
+}
+VALID_STATUS = "1"
+
+
+class KnowledgebaseNotFound(Exception):
+    pass
+
+
+class KnowledgebaseValidationError(Exception):
+    pass
+
+
+class KnowledgebaseService:
+    model = Knowledgebase
+
+    @classmethod
+    def list(cls, user_id: str) -> list[dict[str, Any]]:
+        connect_db()
+        tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
+        with DB.connection_context():
+            records = (
+                cls.model.select()
+                .where(
+                    (cls.model.tenant_id == tenant_id)
+                    & (cls.model.status == VALID_STATUS)
+                )
+                .order_by(cls.model.create_time.desc(), cls.model.name.asc())
+            )
+            return [record.to_api() for record in records]
+
+    @classmethod
+    def get(cls, kb_id: str, user_id: str) -> dict[str, Any]:
+        return cls.get_record(kb_id, user_id).to_api()
+
+    @classmethod
+    def get_record(cls, kb_id: str, user_id: str) -> Knowledgebase:
+        connect_db()
+        tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
+        with DB.connection_context():
+            try:
+                return cls.model.get(
+                    (cls.model.id == kb_id)
+                    & (cls.model.tenant_id == tenant_id)
+                    & (cls.model.status == VALID_STATUS)
+                )
+            except DoesNotExist as exc:
+                raise KnowledgebaseNotFound(kb_id) from exc
+
+    @classmethod
+    def create(cls, payload: dict[str, Any], user_id: str) -> dict[str, Any]:
+        connect_db()
+        tenant_defaults = UserService.get_tenant_defaults(user_id)
+        data = _normalize_payload(payload, tenant_defaults)
+        name = _deduplicate_name(data["name"], tenant_defaults["tenant_id"])
+        kb_id = uuid4().hex
+        with DB.atomic():
+            cls.model.create(
+                id=kb_id,
+                tenant_id=tenant_defaults["tenant_id"],
+                created_by=user_id,
+                name=name,
+                description=data["description"],
+                embd_id=data["embedding_model"],
+                tenant_embd_id=tenant_defaults["tenant_embd_id"],
+                permission=data["permission"],
+                parser_id=data["chunk_method"],
+                parser_config=data["parser_config"],
+            )
+        return cls.get(kb_id, user_id)
+
+    @classmethod
+    def update(cls, kb_id: str, payload: dict[str, Any], user_id: str) -> dict[str, Any]:
+        connect_db()
+        current = cls.get(kb_id, user_id)
+        tenant_defaults = UserService.get_tenant_defaults(user_id)
+        data = _normalize_payload({**current, **payload}, tenant_defaults)
+        with DB.atomic():
+            updated = (
+                cls.model.update(
+                    name=data["name"],
+                    description=data["description"],
+                    embd_id=data["embedding_model"],
+                    parser_id=data["chunk_method"],
+                    parser_config=data["parser_config"],
+                    permission=data["permission"],
+                    update_time=_current_timestamp(),
+                    update_date=datetime.utcnow(),
+                )
+                .where(
+                    (cls.model.id == kb_id)
+                    & (cls.model.tenant_id == tenant_defaults["tenant_id"])
+                    & (cls.model.status == VALID_STATUS)
+                )
+                .execute()
+            )
+        if updated == 0:
+            raise KnowledgebaseNotFound(kb_id)
+        return cls.get(kb_id, user_id)
+
+    @classmethod
+    def delete(cls, kb_id: str, user_id: str) -> None:
+        cls.delete_many([kb_id], user_id)
+
+    @classmethod
+    def delete_many(cls, kb_ids: list[str], user_id: str) -> None:
+        connect_db()
+        if not kb_ids:
+            return
+        tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
+        with DB.atomic():
+            deleted = (
+                cls.model.update(
+                    status="0",
+                    update_time=_current_timestamp(),
+                    update_date=datetime.utcnow(),
+                )
+                .where(
+                    (cls.model.id.in_(kb_ids))
+                    & (cls.model.tenant_id == tenant_id)
+                    & (cls.model.status == VALID_STATUS)
+                )
+                .execute()
+            )
+        if deleted == 0:
+            raise KnowledgebaseNotFound(",".join(kb_ids))
+
+
+def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any]) -> dict[str, Any]:
+    name = str(payload.get("name", "")).strip()
+    if not name:
+        raise KnowledgebaseValidationError("Knowledgebase name is required.")
+    if len(name) > 128:
+        raise KnowledgebaseValidationError("Knowledgebase name must be 128 characters or less.")
+
+    payload_parser_config = payload.get("parser_config") or {}
+    if not isinstance(payload_parser_config, dict):
+        raise KnowledgebaseValidationError("parser_config must be an object.")
+    parser_config = {**DEFAULT_PARSER_CONFIG, **payload_parser_config}
+    if not isinstance(parser_config, dict):
+        raise KnowledgebaseValidationError("parser_config must be an object.")
+    parser_config["llm_id"] = tenant_defaults["llm_id"]
+
+    return {
+        "name": name,
+        "description": str(payload.get("description", "")).strip(),
+        "embedding_model": str(
+            payload.get("embedding_model", tenant_defaults["embd_id"])
+        ).strip()
+        or tenant_defaults["embd_id"],
+        "permission": _normalize_permission(payload.get("permission", "me")),
+        "chunk_method": str(payload.get("chunk_method", "naive")).strip() or "naive",
+        "parser_config": parser_config,
+    }
+
+
+def _current_timestamp() -> int:
+    return int(time.time() * 1000)
+
+
+def _normalize_permission(value: Any) -> str:
+    permission = str(value or "me").strip()
+    if permission not in {"me", "team"}:
+        raise KnowledgebaseValidationError("permission must be 'me' or 'team'.")
+    return permission
+
+
+def _deduplicate_name(name: str, tenant_id: str) -> str:
+    existing = {
+        record.name
+        for record in Knowledgebase.select(Knowledgebase.name).where(
+            (Knowledgebase.tenant_id == tenant_id)
+            & (Knowledgebase.status == VALID_STATUS)
+        )
+    }
+    if name not in existing:
+        return name
+
+    counter = 1
+    while f"{name} ({counter})" in existing:
+        counter += 1
+    return f"{name} ({counter})"
