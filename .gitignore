@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.run/
+.env
+
+web/node_modules/
+web/dist/
+web/.vite/
+*.tsbuildinfo
+
+.agents
+.codex
