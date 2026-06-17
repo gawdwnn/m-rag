@@ -41,3 +41,47 @@ async def upload_documents(dataset_id: str):
     if success:
         return get_result(data=result), 201
     return get_error_data_result(message=result)
+
+
+@manager.post("/documents/ingest")
+@login_required
+async def ingest_documents():
+    payload = await request.get_json(silent=True) or {}
+    success, result = await run_db_call(
+        document_api_service.ingest_documents,
+        current_user_id(),
+        payload,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)
+
+
+@manager.post("/datasets/<dataset_id>/documents/parse")
+@login_required
+async def parse_documents(dataset_id: str):
+    payload = await request.get_json(silent=True) or {}
+    success, result = await run_db_call(
+        document_api_service.parse_documents,
+        current_user_id(),
+        dataset_id,
+        payload,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)
+
+
+@manager.post("/datasets/<dataset_id>/documents/stop")
+@login_required
+async def stop_parse_documents(dataset_id: str):
+    payload = await request.get_json(silent=True) or {}
+    success, result = await run_db_call(
+        document_api_service.stop_parse_documents,
+        current_user_id(),
+        dataset_id,
+        payload,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)

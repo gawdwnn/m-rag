@@ -6,6 +6,7 @@ from api.db.services.knowledgebase_service import (
     KnowledgebaseService,
     KnowledgebaseValidationError,
 )
+from api.db.services.task_service import TaskService
 from api.db.services.user_service import AuthenticationError, UserService
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "KnowledgebaseNotFound",
     "KnowledgebaseService",
     "KnowledgebaseValidationError",
+    "TaskService",
     "UserService",
 ]

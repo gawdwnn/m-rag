@@ -17,6 +17,10 @@ class ApiConfig:
     minio_access_key: str
     minio_secret_key: str
     minio_secure: bool
+    redis_host: str
+    redis_port: int
+    redis_password: str
+    redis_db: int
 
 
 def load_api_config() -> ApiConfig:
@@ -34,4 +38,8 @@ def load_api_config() -> ApiConfig:
         minio_access_key=os.getenv("M_RAGFLOW_MINIO_ACCESS_KEY", "m_ragflow"),
         minio_secret_key=os.getenv("M_RAGFLOW_MINIO_SECRET_KEY", "m_ragflow_secret"),
         minio_secure=os.getenv("M_RAGFLOW_MINIO_SECURE", "false").lower() == "true",
+        redis_host=os.getenv("M_RAGFLOW_REDIS_HOST", "127.0.0.1"),
+        redis_port=int(os.getenv("M_RAGFLOW_REDIS_PORT", "6381")),
+        redis_password=os.getenv("M_RAGFLOW_REDIS_PASSWORD", "m_ragflow_redis"),
+        redis_db=int(os.getenv("M_RAGFLOW_REDIS_DB", "0")),
     )

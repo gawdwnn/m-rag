@@ -1,3 +1,5 @@
+import { CircleX, PlayCircle, RotateCcw } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { DocumentInfo } from '@/pages/datasets/types';
@@ -6,12 +8,16 @@ type DatasetTableProps = {
   documents: DocumentInfo[];
   loading: boolean;
   onRefresh: () => void;
+  onRun: (document: DocumentInfo) => void;
+  runningDocumentId?: string | null;
 };
 
 export function DatasetTable({
   documents,
   loading,
   onRefresh,
+  onRun,
+  runningDocumentId,
 }: DatasetTableProps) {
   return (
     <div className="w-full overflow-hidden rounded-md border border-border-button bg-bg-base">
@@ -58,7 +64,7 @@ export function DatasetTable({
               </tr>
             ) : (
               documents.map((document) => (
-                <tr key={document.id} className="border-t">
+                <tr key={document.id} className="border-t" data-state={parseState(document.run)}>
                   <td className="max-w-[280px] px-4 py-3">
                     <div className="min-w-0">
                       <div className="truncate font-medium">
@@ -82,9 +88,22 @@ export function DatasetTable({
                   <td className="px-4 py-3">{document.chunk_count}</td>
                   <td className="px-4 py-3">{document.token_count}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={document.run === '0' ? 'outline' : 'secondary'}>
-                      run {document.run}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={runningDocumentId === document.id}
+                        onClick={() => onRun(document)}
+                        aria-label={isParserRunning(document.run) ? 'Cancel parsing' : 'Parse document'}
+                      >
+                        {operationIcon(document)}
+                      </Button>
+                      <Badge variant={document.run === '0' ? 'outline' : 'secondary'}>
+                        {parseState(document.run)}
+                      </Badge>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="grid gap-1">
@@ -92,12 +111,12 @@ export function DatasetTable({
                         <div
                           className="h-full bg-accent-primary"
                           style={{
-                            width: `${Math.max(0, Math.min(100, document.progress))}%`,
+                            width: `${progressPercent(document.progress)}%`,
                           }}
                         />
                       </div>
                       <span className="text-xs text-text-secondary">
-                        {document.progress}
+                        {progressPercent(document.progress)}%
                       </span>
                     </div>
                   </td>
@@ -109,6 +128,36 @@ export function DatasetTable({
       </div>
     </div>
   );
+}
+
+function operationIcon(document: DocumentInfo) {
+  if (isParserRunning(document.run)) {
+    return <CircleX className="text-destructive" />;
+  }
+  if (document.run === '0') {
+    return <PlayCircle className="text-accent-primary" />;
+  }
+  return <RotateCcw className="text-accent-primary" />;
+}
+
+function isParserRunning(run: string) {
+  return run === '1' || run === '5';
+}
+
+function parseState(run: string) {
+  const states: Record<string, string> = {
+    '0': 'unstart',
+    '1': 'running',
+    '2': 'cancel',
+    '3': 'done',
+    '4': 'fail',
+    '5': 'running',
+  };
+  return states[run] ?? 'unknown';
+}
+
+function progressPercent(progress: number) {
+  return Math.round(Math.max(0, Math.min(1, progress)) * 100);
 }
 
 function formatDate(value: string) {

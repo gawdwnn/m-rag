@@ -372,6 +372,29 @@ class File2Document(BaseModel):
         table_name = "file2document"
 
 
+class Task(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    doc_id = CharField(max_length=32, index=True)
+    from_page = IntegerField(default=0)
+    to_page = IntegerField(default=100000000)
+    task_type = CharField(max_length=32, default="")
+    priority = IntegerField(default=0)
+    begin_at = DateTimeField(null=True, index=True)
+    process_duration = FloatField(default=0)
+    progress = FloatField(default=0, index=True)
+    progress_msg = TextField(null=True, default="")
+    retry_count = IntegerField(default=0)
+    digest = TextField(null=True, default="")
+    chunk_ids = TextField(null=True, default="")
+    create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    create_date = DateTimeField(default=datetime.utcnow, index=True)
+    update_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    update_date = DateTimeField(default=datetime.utcnow, index=True)
+
+    class Meta:
+        table_name = "task"
+
+
 def _timestamp_to_iso(value: int | None) -> str:
     if not value:
         return ""
