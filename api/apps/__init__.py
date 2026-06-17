@@ -1,4 +1,7 @@
 import asyncio
+import logging
+import threading
+import time
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import ParamSpec, TypeVar
@@ -89,8 +92,31 @@ def create_app() -> Quart:
     @app.before_serving
     async def init_db() -> None:
         await asyncio.to_thread(init_database_tables)
+        _start_update_progress_thread()
 
     return app
 
 
 app = create_app()
+
+
+_progress_thread_started = False
+
+
+def _start_update_progress_thread() -> None:
+    global _progress_thread_started
+    if _progress_thread_started:
+        return
+    _progress_thread_started = True
+
+    def update_progress() -> None:
+        from api.db.services.document_service import DocumentService
+
+        while True:
+            try:
+                DocumentService.update_progress()
+            except Exception:
+                logging.exception("update_progress exception")
+            time.sleep(2)
+
+    threading.Thread(target=update_progress, daemon=True).start()

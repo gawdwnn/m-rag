@@ -39,6 +39,23 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: ${M_RAGFLOW_REDIS_IMAGE:-redis:7.2-alpine}
+    container_name: ${M_RAGFLOW_REDIS_CONTAINER:-m-ragflow-redis}
+    env_file:
+      - ../.env
+    command: ["redis-server", "--requirepass", "${M_RAGFLOW_REDIS_PASSWORD:-m_ragflow_redis}", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "${M_RAGFLOW_REDIS_PORT:-6381}:6379"
+    volumes:
+      - mragflow_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${M_RAGFLOW_REDIS_PASSWORD:-m_ragflow_redis}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   mragflow_mysql_data:
   mragflow_minio_data:
+  mragflow_redis_data:

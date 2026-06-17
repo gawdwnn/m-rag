@@ -9,4 +9,9 @@ export default {
   setting: `${restAPIv1}/users/me`,
   userInfo: `${restAPIv1}/users/me`,
   tenantInfo: `${restAPIv1}/users/me/models`,
+  documentIngest: `${restAPIv1}/documents/ingest`,
+  documentParse: (datasetId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents/parse`,
+  documentStop: (datasetId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents/stop`,
 };

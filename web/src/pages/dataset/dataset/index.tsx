@@ -5,7 +5,7 @@ import { FileUploadDialog } from '@/components/file-upload-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { useFetchDocumentList } from '@/hooks/use-document-request';
+import { useFetchDocumentList, useRunDocument } from '@/hooks/use-document-request';
 import { useFetchKnowledgeDetail } from '@/hooks/use-knowledge-request';
 import { Routes } from '@/routes';
 import { DatasetTable } from './dataset-table';
@@ -16,6 +16,7 @@ export default function Dataset() {
   const datasetQuery = useFetchKnowledgeDetail(datasetId);
   const knowledgeBase = datasetQuery.data ?? null;
   const documentsQuery = useFetchDocumentList(datasetId);
+  const runDocument = useRunDocument(datasetId);
   const {
     documentUploadLoading,
     documentUploadVisible,
@@ -82,6 +83,17 @@ export default function Dataset() {
             documents={documents}
             loading={documentsQuery.isFetching}
             onRefresh={() => void documentsQuery.refetch()}
+            onRun={(document) => {
+              void runDocument.mutateAsync({
+                documentIds: [document.id],
+                run: document.run === '1' || document.run === '5' ? 2 : 1,
+                option:
+                  document.run === '3'
+                    ? { delete: true, apply_kb: false }
+                    : undefined,
+              });
+            }}
+            runningDocumentId={runDocument.isPending ? runDocument.variables?.documentIds[0] : null}
           />
         </CardContent>
 

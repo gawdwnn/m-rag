@@ -4,6 +4,7 @@ import type {
   Knowledgebase,
   UpdateKnowledgebaseInput,
 } from '@/pages/datasets/types';
+import api from '@/utils/api';
 import { request } from '@/utils/request';
 
 const DATASETS_PATH = '/api/v1/datasets';
@@ -52,4 +53,36 @@ export async function uploadDocument(datasetId: string, files: File[]): Promise<
     data: formData,
   });
   return { docs, total: docs.length };
+}
+
+export async function documentIngest(input: {
+  doc_ids: string[];
+  run: number;
+  delete?: boolean;
+  apply_kb?: boolean;
+}): Promise<{ success_count: number; errors?: string[] }> {
+  return request(api.documentIngest, {
+    method: 'POST',
+    data: input,
+  });
+}
+
+export async function parseDocument(
+  datasetId: string,
+  documentIds: string[],
+): Promise<{ success_count: number; errors?: string[] }> {
+  return request(api.documentParse(datasetId), {
+    method: 'POST',
+    data: { document_ids: documentIds },
+  });
+}
+
+export async function stopDocumentParse(
+  datasetId: string,
+  documentIds: string[],
+): Promise<{ success_count: number; errors?: string[] }> {
+  return request(api.documentStop(datasetId), {
+    method: 'POST',
+    data: { document_ids: documentIds },
+  });
 }

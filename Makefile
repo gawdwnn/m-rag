@@ -45,8 +45,8 @@ health:
 	curl -i $(API_URL)/api/v1/system/healthz
 
 check:
-	uv run python -m compileall api worker common
-	uv run --extra dev ruff check api worker common
+	uv run python -m compileall api worker common rag
+	uv run --extra dev ruff check api worker common rag
 	cd web && npm run build
 
 reset-docker-data:
