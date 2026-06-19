@@ -1,6 +1,7 @@
 from api.storage import get_storage
 
 STORAGE_IMPL = get_storage()
+DOC_MAXIMUM_SIZE = 128 * 1024 * 1024
 
 
 def get_svr_queue_name(priority: int, suffix: str = "common") -> str:

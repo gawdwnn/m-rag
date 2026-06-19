@@ -60,7 +60,7 @@ export default function Dataset() {
               <Badge variant="secondary">{knowledgeBase.name}</Badge>
             </div>
             <p className="text-sm text-text-secondary">
-              Files in this dataset become searchable after parsing.
+              Files in this dataset are parsed before indexing.
             </p>
           </div>
 
