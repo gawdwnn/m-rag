@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { UploadFormSchemaType } from '@/components/file-upload-dialog';
-import { useUploadDocument } from '@/hooks/use-document-request';
+import { useRunDocument, useUploadDocument } from '@/hooks/use-document-request';
 
 type UseHandleUploadDocumentProps = {
   datasetId: string | null;
@@ -13,6 +13,7 @@ export function useHandleUploadDocument({
   const [documentUploadVisible, setDocumentUploadVisible] =
     React.useState(false);
   const uploadMutation = useUploadDocument(datasetId);
+  const runDocument = useRunDocument(datasetId);
 
   const showDocumentUploadModal = React.useCallback(() => {
     setDocumentUploadVisible(true);
@@ -23,18 +24,24 @@ export function useHandleUploadDocument({
   }, []);
 
   const onDocumentUploadOk = React.useCallback(
-    async ({ fileList }: UploadFormSchemaType) => {
+    async ({ fileList, parseOnCreation }: UploadFormSchemaType) => {
       if (!datasetId || fileList.length === 0) {
         return;
       }
-      await uploadMutation.mutateAsync(fileList);
+      const result = await uploadMutation.mutateAsync(fileList);
+      if (parseOnCreation && result.docs.length > 0) {
+        await runDocument.mutateAsync({
+          documentIds: result.docs.map((document) => document.id),
+          run: 1,
+        });
+      }
       hideDocumentUploadModal();
     },
-    [datasetId, hideDocumentUploadModal, uploadMutation],
+    [datasetId, hideDocumentUploadModal, runDocument, uploadMutation],
   );
 
   return {
-    documentUploadLoading: uploadMutation.isPending,
+    documentUploadLoading: uploadMutation.isPending || runDocument.isPending,
     documentUploadVisible,
     hideDocumentUploadModal,
     onDocumentUploadOk,

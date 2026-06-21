@@ -274,6 +274,8 @@ class Knowledgebase(BaseModel):
             "token_num": int(self.token_num),
             "chunk_count": int(self.chunk_num),
             "status": self.status,
+            "avatar": self.avatar or "",
+            "update_time": self.update_time,
             "created_at": _timestamp_to_iso(self.create_time),
             "updated_at": _timestamp_to_iso(self.update_time),
         }
@@ -332,8 +334,13 @@ class Document(BaseModel):
             "chunk_count": int(self.chunk_num),
             "progress": float(self.progress),
             "progress_msg": self.progress_msg or "",
+            "process_begin_at": self.process_begin_at.isoformat()
+            if self.process_begin_at
+            else "",
+            "process_duration": float(self.process_duration or 0),
             "run": self.run or "0",
             "status": self.status,
+            "create_time": self.create_time,
             "created_by": self.created_by,
             "created_at": _timestamp_to_iso(self.create_time),
             "updated_at": _timestamp_to_iso(self.update_time),

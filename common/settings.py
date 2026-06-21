@@ -1,7 +1,17 @@
+from api.config import load_api_config
 from api.storage import get_storage
+from rag.utils.es_conn import ESConnection
 
 STORAGE_IMPL = get_storage()
 DOC_MAXIMUM_SIZE = 128 * 1024 * 1024
+DOC_BULK_SIZE = 4
+EMBEDDING_BATCH_SIZE = 16
+DOC_ENGINE = load_api_config().doc_engine
+
+if DOC_ENGINE.lower() != "elasticsearch":
+    raise RuntimeError(f"Not supported doc engine: {DOC_ENGINE}")
+
+docStoreConn = ESConnection()
 
 
 def get_svr_queue_name(priority: int, suffix: str = "common") -> str:

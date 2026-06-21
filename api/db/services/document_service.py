@@ -116,6 +116,74 @@ class DocumentService:
             return updated
 
     @classmethod
+    def increment_chunk_num(
+        cls,
+        doc_id: str,
+        kb_id: str,
+        token_num: int,
+        chunk_num: int,
+        duration: float,
+    ) -> int:
+        connect_db()
+        with DB.atomic():
+            updated_doc = (
+                cls.model.update(
+                    token_num=cls.model.token_num + token_num,
+                    chunk_num=cls.model.chunk_num + chunk_num,
+                    process_duration=cls.model.process_duration + duration,
+                    update_time=_current_timestamp(),
+                    update_date=datetime.utcnow(),
+                )
+                .where((cls.model.id == doc_id) & (cls.model.kb_id == kb_id))
+                .execute()
+            )
+            if updated_doc == 0:
+                raise DocumentNotFound(doc_id)
+            updated_kb = (
+                Knowledgebase.update(
+                    token_num=Knowledgebase.token_num + token_num,
+                    chunk_num=Knowledgebase.chunk_num + chunk_num,
+                    update_time=_current_timestamp(),
+                    update_date=datetime.utcnow(),
+                )
+                .where(Knowledgebase.id == kb_id)
+                .execute()
+            )
+            if updated_kb == 0:
+                raise DocumentNotFound(kb_id)
+            return updated_kb
+
+    @classmethod
+    def delete_document_and_update_kb_counts(cls, document_id: str) -> bool:
+        connect_db()
+        with DB.atomic():
+            doc = cls.model.get_or_none(
+                (cls.model.id == document_id) & (cls.model.status == VALID_STATUS)
+            )
+            if doc is None:
+                return False
+            kb_id = doc.kb_id
+            token_num = int(doc.token_num or 0)
+            chunk_num = int(doc.chunk_num or 0)
+            deleted = cls.model.delete().where(cls.model.id == document_id).execute()
+            if deleted == 0:
+                return False
+            updated = (
+                Knowledgebase.update(
+                    doc_num=Knowledgebase.doc_num - 1,
+                    token_num=Knowledgebase.token_num - token_num,
+                    chunk_num=Knowledgebase.chunk_num - chunk_num,
+                    update_time=_current_timestamp(),
+                    update_date=datetime.utcnow(),
+                )
+                .where(Knowledgebase.id == kb_id)
+                .execute()
+            )
+            if updated == 0:
+                raise DocumentNotFound(kb_id)
+            return True
+
+    @classmethod
     def begin2parse(cls, document_id: str) -> None:
         cls.update_by_id(
             document_id,

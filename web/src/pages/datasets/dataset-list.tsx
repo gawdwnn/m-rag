@@ -1,7 +1,7 @@
-import { Badge } from '@/components/ui/badge';
 import { EmptyAppCard } from '@/components/empty/empty';
 import { EmptyCardType } from '@/components/empty/constant';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HomeCard } from '@/components/home-card';
+import { SharedBadge } from '@/components/shared-badge';
 import { DatasetDropdown } from './dataset-dropdown';
 import type { Knowledgebase } from './types';
 
@@ -62,29 +62,18 @@ export function DatasetCard({
   onDelete?: (dataset: Knowledgebase) => Promise<void>;
 }) {
   return (
-    <Card
-      className="h-full cursor-pointer px-2.5 py-4 transition-shadow hover:shadow-md"
+    <HomeCard
+      data={{
+        name: dataset.name,
+        avatar: dataset.avatar,
+        description: `${dataset.document_count} files`,
+        update_time: dataset.update_time ?? dataset.updated_at,
+      }}
+      moreDropdown={
+        onDelete ? <DatasetDropdown dataset={dataset} onDelete={onDelete} /> : null
+      }
+      sharedBadge={<SharedBadge>{dataset.nickname || dataset.created_by}</SharedBadge>}
       onClick={() => onSelect(dataset)}
-      tabIndex={0}
-    >
-      <CardHeader className="flex-row items-start gap-3 space-y-0 p-0">
-        <div className="grid size-9 shrink-0 place-items-center rounded-md bg-bg-card text-sm font-semibold">
-          {dataset.name.slice(0, 1).toUpperCase()}
-        </div>
-        <CardTitle className="min-w-0 flex-1 truncate text-base">
-          {dataset.name}
-        </CardTitle>
-        {onDelete ? <DatasetDropdown dataset={dataset} onDelete={onDelete} /> : null}
-      </CardHeader>
-      <CardContent className="p-0 pt-3">
-        <div className="grid gap-2 text-sm text-text-secondary">
-          <p>{dataset.document_count} files</p>
-          <div className="flex items-center justify-between gap-3">
-            <span className="truncate">{dataset.updated_at}</span>
-            <Badge variant="outline">{dataset.created_by}</Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    />
   );
 }

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { DocumentListResponse } from '@/pages/datasets/types';
 import {
+  changeDocumentsStatus,
+  deleteDocument,
   documentIngest,
   listDocument,
   uploadDocument,
@@ -52,6 +54,39 @@ export function useRunDocument(datasetId: string | null) {
         doc_ids: documentIds,
         run,
         ...(option || {}),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentQueryKey(datasetId) });
+      queryClient.invalidateQueries({ queryKey: datasetQueryKey });
+    },
+  });
+}
+
+export function useDeleteDocument(datasetId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentIds: string[]) => deleteDocument(datasetId as string, documentIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentQueryKey(datasetId) });
+      queryClient.invalidateQueries({ queryKey: datasetQueryKey });
+    },
+  });
+}
+
+export function useSetDocumentStatus(datasetId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      documentIds,
+      status,
+    }: {
+      documentIds: string[];
+      status: number;
+    }) =>
+      changeDocumentsStatus({
+        datasetId: datasetId as string,
+        documentIds,
+        status,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentQueryKey(datasetId) });

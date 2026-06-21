@@ -15,6 +15,9 @@ export enum Routes {
   DatasetBase = '/dataset',
   Files = '/files',
   Dataset = `${Routes.DatasetBase}/${Routes.Files}`,
+  Document = '/document',
+  Chunk = '/chunk',
+  ParsedResult = `${Routes.Chunk}/parsed-result`,
   Chats = '/chats',
   Search = '/search',
   Searches = '/searches',
@@ -61,6 +64,10 @@ const routeConfigOptions: LazyRouteConfig[] = [
   {
     path: Routes.Login,
     Component: () => import('@/pages/login-next'),
+  },
+  {
+    path: `${Routes.Document}/:id`,
+    Component: () => import('@/pages/document-viewer'),
   },
   {
     path: '/*',
@@ -113,6 +120,11 @@ const routeConfigOptions: LazyRouteConfig[] = [
             Component: () => import('@/pages/user-setting/profile'),
           },
         ],
+      },
+      {
+        path: `${Routes.ParsedResult}/chunks`,
+        Component: () =>
+          import('@/pages/chunk/parsed-result/add-knowledge/components/knowledge-chunk'),
       },
     ],
   },

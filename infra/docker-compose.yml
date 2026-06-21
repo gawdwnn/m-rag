@@ -1,4 +1,31 @@
 services:
+  es01:
+    image: elasticsearch:${STACK_VERSION:-8.11.3}
+    container_name: m-ragflow-es01
+    env_file:
+      - ../.env
+    environment:
+      - node.name=es01
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-infini_m_ragflow}
+      - bootstrap.memory_lock=false
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - cluster.routing.allocation.disk.watermark.low=5gb
+      - cluster.routing.allocation.disk.watermark.high=3gb
+      - cluster.routing.allocation.disk.watermark.flood_stage=2gb
+    mem_limit: ${MEM_LIMIT:-2147483648}
+    ports:
+      - "${ES_PORT:-1202}:9200"
+    volumes:
+      - mragflow_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u elastic:$${ELASTIC_PASSWORD} http://localhost:9200 >/dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
   mysql:
     image: ${M_RAGFLOW_MYSQL_IMAGE:-mysql:8.4}
     container_name: ${M_RAGFLOW_MYSQL_CONTAINER:-m-ragflow-mysql}
@@ -14,10 +41,10 @@ services:
     volumes:
       - mragflow_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
 
   minio:
     image: ${M_RAGFLOW_MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
@@ -34,10 +61,10 @@ services:
     volumes:
       - mragflow_minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
 
   redis:
     image: ${M_RAGFLOW_REDIS_IMAGE:-redis:7.2-alpine}
@@ -51,11 +78,12 @@ services:
       - mragflow_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${M_RAGFLOW_REDIS_PASSWORD:-m_ragflow_redis}", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      interval: 10s
+      timeout: 10s
+      retries: 120
 
 volumes:
+  mragflow_es_data:
   mragflow_mysql_data:
   mragflow_minio_data:
   mragflow_redis_data:

@@ -14,4 +14,14 @@ export default {
     `${restAPIv1}/datasets/${datasetId}/documents/parse`,
   documentStop: (datasetId: string) =>
     `${restAPIv1}/datasets/${datasetId}/documents/stop`,
+  documentDelete: (datasetId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents`,
+  documentChangeStatus: (datasetId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents/batch-update-status`,
+  documentChunks: (datasetId: string, documentId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents/${documentId}/chunks`,
+  documentPreview: (documentId: string) =>
+    `${restAPIv1}/documents/${documentId}/preview`,
+  getDatasetDocumentFileDownload: (datasetId: string, documentId: string) =>
+    `${restAPIv1}/datasets/${datasetId}/documents/${documentId}`,
 };

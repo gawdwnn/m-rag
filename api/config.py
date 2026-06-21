@@ -21,6 +21,10 @@ class ApiConfig:
     redis_port: int
     redis_password: str
     redis_db: int
+    doc_engine: str
+    es_host: str
+    es_port: int
+    elastic_password: str
 
 
 def load_api_config() -> ApiConfig:
@@ -42,4 +46,8 @@ def load_api_config() -> ApiConfig:
         redis_port=int(os.getenv("M_RAGFLOW_REDIS_PORT", "6381")),
         redis_password=os.getenv("M_RAGFLOW_REDIS_PASSWORD", "m_ragflow_redis"),
         redis_db=int(os.getenv("M_RAGFLOW_REDIS_DB", "0")),
+        doc_engine=os.getenv("DOC_ENGINE", "elasticsearch"),
+        es_host=os.getenv("ES_HOST", "127.0.0.1"),
+        es_port=int(os.getenv("ES_PORT", "1202")),
+        elastic_password=os.getenv("ELASTIC_PASSWORD", "infini_m_ragflow"),
     )

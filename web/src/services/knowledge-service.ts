@@ -1,4 +1,5 @@
 import type {
+  ChunkListResponse,
   CreateKnowledgebaseInput,
   DocumentListResponse,
   Knowledgebase,
@@ -45,6 +46,22 @@ export async function listDocument(datasetId: string): Promise<DocumentListRespo
   return request<DocumentListResponse>(`${DATASETS_PATH}/${datasetId}/documents`);
 }
 
+export async function listDocumentChunks({
+  datasetId,
+  documentId,
+  page = 1,
+  pageSize = 30,
+}: {
+  datasetId: string;
+  documentId: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ChunkListResponse> {
+  return request<ChunkListResponse>(api.documentChunks(datasetId, documentId), {
+    params: { page, page_size: pageSize },
+  });
+}
+
 export async function uploadDocument(datasetId: string, files: File[]): Promise<DocumentListResponse> {
   const formData = new FormData();
   files.forEach((file) => formData.append('file', file));
@@ -53,6 +70,31 @@ export async function uploadDocument(datasetId: string, files: File[]): Promise<
     data: formData,
   });
   return { docs, total: docs.length };
+}
+
+export async function deleteDocument(
+  datasetId: string,
+  documentIds: string[],
+): Promise<{ deleted: number }> {
+  return request(api.documentDelete(datasetId), {
+    method: 'DELETE',
+    data: { ids: documentIds },
+  });
+}
+
+export async function changeDocumentsStatus({
+  datasetId,
+  documentIds,
+  status,
+}: {
+  datasetId: string;
+  documentIds: string[];
+  status: number;
+}): Promise<{ updated: number }> {
+  return request(api.documentChangeStatus(datasetId), {
+    method: 'POST',
+    data: { doc_ids: documentIds, status },
+  });
 }
 
 export async function documentIngest(input: {

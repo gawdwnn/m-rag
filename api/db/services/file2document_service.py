@@ -18,6 +18,11 @@ class File2DocumentService:
         return list(cls.model.select().where(cls.model.document_id == document_id))
 
     @classmethod
+    def delete_by_document_id(cls, document_id: str) -> int:
+        connect_db()
+        return cls.model.delete().where(cls.model.document_id == document_id).execute()
+
+    @classmethod
     def get_storage_address(
         cls,
         doc_id: str | None = None,

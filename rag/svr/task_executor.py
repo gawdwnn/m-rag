@@ -9,9 +9,11 @@ import xxhash
 from api.db.db_models import init_database_tables
 from api.db.services.document_service import DocumentService
 from api.db.services.file2document_service import File2DocumentService
+from api.db.services.llm_service import LLMBundle
 from api.db.services.task_service import TaskService, has_canceled
 from common import settings
 from rag.app import naive
+from rag.nlp import search
 from rag.utils.redis_conn import REDIS_CONN
 
 FACTORY = {
@@ -75,11 +77,35 @@ def run_task(task: dict) -> None:
             progress(1.0, f"No chunk built from {task['name']}")
             return
 
-        TaskService.update_chunk_ids(task_id, " ".join(chunk["id"] for chunk in chunks))
+        embedding_model = LLMBundle(task["tenant_id"], task["embd_id"], lang=task["language"])
+        started_embedding = timer()
+        token_count, vector_size = embedding(
+            chunks,
+            embedding_model,
+            task.get("parser_config") or {},
+            progress,
+        )
+        progress(msg=f"Embedding chunks ({timer() - started_embedding:.2f}s)")
+
+        init_kb(task, vector_size)
+        started_indexing = timer()
+        insert_result = insert_chunks(task_id, task["tenant_id"], task["kb_id"], chunks, progress)
+        if not insert_result:
+            return
+
+        chunk_count = len({chunk["id"] for chunk in chunks})
+        DocumentService.increment_chunk_num(
+            task["doc_id"],
+            task["kb_id"],
+            token_count,
+            chunk_count,
+            0,
+        )
+        progress(msg=f"Indexing done ({timer() - started_indexing:.2f}s).")
         elapsed = timer() - started
         progress(
             1.0,
-            f"Task done ({elapsed:.2f}s). Embedding/indexing starts in the next slice.",
+            f"Task done ({elapsed:.2f}s).",
         )
     except RuntimeError as exc:
         if "canceled" not in str(exc).lower():
@@ -168,6 +194,81 @@ def build_chunks(task: dict, progress_callback) -> list[dict]:
 
     progress_callback(msg=f"Generate {len(docs)} chunks")
     return docs
+
+
+def embedding(
+    docs: list[dict],
+    model: LLMBundle,
+    parser_config: dict | None = None,
+    callback=None,
+) -> tuple[int, int]:
+    parser_config = parser_config or {}
+    titles = [doc.get("docnm_kwd", "Title") for doc in docs]
+    contents = [doc["content_with_weight"] or "None" for doc in docs]
+
+    token_count = 0
+    title_vectors, title_tokens = model.encode(titles[0:1])
+    token_count += title_tokens
+    content_vectors: list[list[float]] = []
+    for offset in range(0, len(contents), settings.EMBEDDING_BATCH_SIZE):
+        batch = contents[offset : offset + settings.EMBEDDING_BATCH_SIZE]
+        vectors, batch_tokens = model.encode(batch)
+        content_vectors.extend(vectors)
+        token_count += batch_tokens
+        if callback:
+            callback(prog=0.7 + 0.2 * (offset + len(batch)) / len(contents), msg="")
+
+    title_weight = float(parser_config.get("filename_embd_weight") or 0.1)
+    title_vector = title_vectors[0] if title_vectors else []
+    vector_size = 0
+    for index, doc in enumerate(docs):
+        content_vector = content_vectors[index]
+        vector_size = len(content_vector)
+        if title_vector and len(title_vector) == vector_size:
+            vector = [
+                title_weight * title_value + (1 - title_weight) * content_value
+                for title_value, content_value in zip(title_vector, content_vector, strict=False)
+            ]
+        else:
+            vector = content_vector
+        doc[f"q_{len(vector)}_vec"] = vector
+    return token_count, vector_size
+
+
+def init_kb(task: dict, vector_size: int):
+    index_name = search.index_name(task["tenant_id"])
+    return settings.docStoreConn.create_idx(
+        index_name,
+        task["kb_id"],
+        vector_size,
+        task.get("parser_id"),
+    )
+
+
+def insert_chunks(
+    task_id: str,
+    tenant_id: str,
+    dataset_id: str,
+    chunks: list[dict],
+    progress_callback,
+) -> bool:
+    index_name = search.index_name(tenant_id)
+    for offset in range(0, len(chunks), settings.DOC_BULK_SIZE):
+        if has_canceled(task_id):
+            progress_callback(-1, msg="Task has been canceled.")
+            return False
+
+        batch = chunks[offset : offset + settings.DOC_BULK_SIZE]
+        errors = settings.docStoreConn.insert(batch, index_name, dataset_id)
+        if errors:
+            error_message = f"Insert chunk error: {errors}"
+            progress_callback(-1, msg=error_message)
+            raise RuntimeError(error_message)
+
+        chunk_ids = [chunk["id"] for chunk in chunks[: offset + len(batch)]]
+        TaskService.update_chunk_ids(task_id, " ".join(chunk_ids))
+        progress_callback(prog=0.8 + 0.1 * (offset + len(batch)) / len(chunks), msg="")
+    return True
 
 
 def set_progress(task_id: str, prog: float | None = None, msg: str = "Processing...") -> None:

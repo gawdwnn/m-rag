@@ -1,4 +1,7 @@
-from quart import Blueprint, request
+import mimetypes
+from io import BytesIO
+
+from quart import Blueprint, request, send_file
 
 from api.apps import current_user_id, login_required
 from api.apps.services import document_api_service
@@ -85,3 +88,93 @@ async def stop_parse_documents(dataset_id: str):
     if success:
         return get_result(data=result)
     return get_error_data_result(message=result)
+
+
+@manager.delete("/datasets/<dataset_id>/documents")
+@login_required
+async def delete_documents(dataset_id: str):
+    payload = await request.get_json(silent=True) or {}
+    success, result = await run_db_call(
+        document_api_service.delete_documents,
+        current_user_id(),
+        dataset_id,
+        payload,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)
+
+
+@manager.post("/datasets/<dataset_id>/documents/batch-update-status")
+@login_required
+async def batch_update_document_status(dataset_id: str):
+    payload = await request.get_json(silent=True) or {}
+    success, result = await run_db_call(
+        document_api_service.batch_update_document_status,
+        current_user_id(),
+        dataset_id,
+        payload,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)
+
+
+@manager.get("/documents/<document_id>/preview")
+@login_required
+async def preview_document(document_id: str):
+    success, result = await run_db_call(
+        document_api_service.get_document_file,
+        current_user_id(),
+        document_id,
+    )
+    if not success:
+        return get_error_data_result(message=result)
+    mimetype = _guess_mimetype(result["name"])
+    return await send_file(
+        BytesIO(result["data"]),
+        mimetype=mimetype,
+        attachment_filename=result["name"],
+        as_attachment=False,
+    )
+
+
+@manager.get("/datasets/<dataset_id>/documents/<document_id>")
+@login_required
+async def download_dataset_document(dataset_id: str, document_id: str):
+    success, result = await run_db_call(
+        document_api_service.get_document_file,
+        current_user_id(),
+        document_id,
+        dataset_id,
+    )
+    if not success:
+        return get_error_data_result(message=result)
+    return await send_file(
+        BytesIO(result["data"]),
+        mimetype="application/octet-stream",
+        attachment_filename=result["name"],
+        as_attachment=True,
+    )
+
+
+@manager.get("/documents/<document_id>")
+@login_required
+async def download_document(document_id: str):
+    success, result = await run_db_call(
+        document_api_service.get_document_file,
+        current_user_id(),
+        document_id,
+    )
+    if not success:
+        return get_error_data_result(message=result)
+    return await send_file(
+        BytesIO(result["data"]),
+        mimetype="application/octet-stream",
+        attachment_filename=result["name"],
+        as_attachment=True,
+    )
+
+
+def _guess_mimetype(filename: str) -> str:
+    return mimetypes.guess_type(filename)[0] or "application/octet-stream"

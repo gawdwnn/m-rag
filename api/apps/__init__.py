@@ -79,6 +79,7 @@ def create_app() -> Quart:
     app.secret_key = config.secret_key
     app.url_map.strict_slashes = False
 
+    from api.apps.restful_apis.chunk_api import manager as chunk_manager
     from api.apps.restful_apis.dataset_api import manager as dataset_manager
     from api.apps.restful_apis.document_api import manager as document_manager
     from api.apps.restful_apis.system_api import manager as system_manager
@@ -88,6 +89,7 @@ def create_app() -> Quart:
     app.register_blueprint(user_manager, url_prefix="/api/v1")
     app.register_blueprint(dataset_manager, url_prefix="/api/v1")
     app.register_blueprint(document_manager, url_prefix="/api/v1")
+    app.register_blueprint(chunk_manager, url_prefix="/api/v1")
 
     @app.before_serving
     async def init_db() -> None:
