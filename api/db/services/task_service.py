@@ -155,7 +155,8 @@ def queue_tasks(doc: dict[str, Any], bucket: str, name: str, priority: int = 0) 
     with DB.atomic():
         Task.delete().where(Task.doc_id == doc["id"]).execute()
         Task.create(**task)
-        DocumentService.begin2parse(doc["id"])
+
+    DocumentService.begin2parse(doc["id"])
 
     queue_name = settings.get_svr_queue_name(priority, "common")
     message = {"id": task["id"], "doc_id": doc["id"], "task_type": task["task_type"]}

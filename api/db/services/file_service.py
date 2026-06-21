@@ -12,6 +12,7 @@ from api.db.services.file2document_service import File2DocumentService
 from api.utils.file_utils import filename_type
 from common import settings
 from common.constants import FileSource
+from rag.nlp import search
 
 SUPPORTED_TYPES = {FileType.PDF.value, FileType.DOC.value}
 
@@ -75,6 +76,10 @@ class FileService:
                 uploaded.append(doc.to_api())
 
         return uploaded
+
+    @classmethod
+    def get_original_bytes(cls, bucket: str, name: str) -> bytes:
+        return settings.STORAGE_IMPL.get(bucket, name)
 
     @classmethod
     def get_root_folder(cls, tenant_id: str) -> dict[str, Any]:
@@ -172,6 +177,52 @@ class FileService:
             source_type=FileSource.KNOWLEDGEBASE.value,
         )
         File2DocumentService.insert(file.id, doc["id"])
+
+    @classmethod
+    def delete_docs(cls, doc_ids: list[str], tenant_id: str) -> str:
+        connect_db()
+        errors: list[str] = []
+        from api.db.services.task_service import TaskService, cancel_all_task_of
+
+        for doc_id in doc_ids:
+            try:
+                exists, doc = DocumentService.get_by_id(doc_id)
+                if not exists or doc is None:
+                    raise FileUploadError("Document not found!")
+
+                bucket, name = File2DocumentService.get_storage_address(doc_id=doc_id)
+                bridges = File2DocumentService.get_by_document_id(doc_id)
+
+                cancel_all_task_of(doc_id)
+                TaskService.delete_by_doc_ids([doc_id])
+
+                index_name = search.index_name(tenant_id)
+                try:
+                    settings.docStoreConn.delete({"doc_id": doc_id}, index_name, doc.kb_id)
+                except Exception as exc:
+                    raise RuntimeError(f"Failed to delete chunks from doc store: {exc}") from exc
+
+                if not DocumentService.delete_document_and_update_kb_counts(doc_id):
+                    raise FileUploadError("Document not found!")
+
+                deleted_file_count = 0
+                if bridges:
+                    file_id = bridges[0].file_id
+                    deleted_file_count = (
+                        cls.model.delete()
+                        .where(
+                            (cls.model.id == file_id)
+                            & (cls.model.source_type == FileSource.KNOWLEDGEBASE.value)
+                        )
+                        .execute()
+                    )
+                File2DocumentService.delete_by_document_id(doc_id)
+                if deleted_file_count > 0 and bucket and name:
+                    settings.STORAGE_IMPL.rm(bucket, name)
+            except Exception as exc:
+                errors.append(f"{doc_id}: {exc}")
+
+        return "; ".join(errors)
 
     @staticmethod
     def get_parser(doc_type: str, filename: str, default: str) -> str:

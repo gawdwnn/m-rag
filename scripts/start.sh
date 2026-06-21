@@ -15,44 +15,9 @@ WEB_PID="${WEB_PID:-$RUN_DIR/web.pid}"
 . "$ROOT_DIR/scripts/env.sh"
 load_m_ragflow_env "$ROOT_DIR"
 
-DB_USER="${M_RAGFLOW_DB_USER:-m_ragflow}"
-DB_PASSWORD="${M_RAGFLOW_DB_PASSWORD:-m_ragflow}"
-REDIS_PASSWORD="${M_RAGFLOW_REDIS_PASSWORD:-m_ragflow_redis}"
-
 mkdir -p "$LOG_DIR"
 
-docker compose -f "$COMPOSE_FILE" up -d
-
-echo "Waiting for Docker services..."
-i=0
-until docker compose -f "$COMPOSE_FILE" exec -T mysql mysqladmin ping -h 127.0.0.1 -u"$DB_USER" -p"$DB_PASSWORD" >/dev/null 2>&1; do
-  i=$((i + 1))
-  if [ "$i" -ge 60 ]; then
-    echo "Docker services did not become ready in time." >&2
-    exit 1
-  fi
-  sleep 1
-done
-
-i=0
-until docker compose -f "$COMPOSE_FILE" exec -T minio mc ready local >/dev/null 2>&1; do
-  i=$((i + 1))
-  if [ "$i" -ge 60 ]; then
-    echo "MinIO did not become ready in time." >&2
-    exit 1
-  fi
-  sleep 1
-done
-
-i=0
-until docker compose -f "$COMPOSE_FILE" exec -T redis redis-cli -a "$REDIS_PASSWORD" ping >/dev/null 2>&1; do
-  i=$((i + 1))
-  if [ "$i" -ge 60 ]; then
-    echo "Redis did not become ready in time." >&2
-    exit 1
-  fi
-  sleep 1
-done
+docker compose -f "$COMPOSE_FILE" up -d --wait
 
 start_process() {
   local name="$1"

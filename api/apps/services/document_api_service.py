@@ -4,6 +4,7 @@ from werkzeug.datastructures import FileStorage
 
 from api.db.services import (
     DocumentService,
+    File2DocumentService,
     FileService,
     FileUploadError,
     KnowledgebaseNotFound,
@@ -141,6 +142,88 @@ def stop_parse_documents(user_id: str, dataset_id: str, payload: dict[str, Any])
     if errors:
         result["errors"] = errors
     return True, result
+
+
+def delete_documents(user_id: str, dataset_id: str, payload: dict[str, Any]):
+    try:
+        kb = KnowledgebaseService.get_record(dataset_id, user_id)
+    except KnowledgebaseNotFound:
+        return False, f"User '{user_id}' lacks permission for dataset '{dataset_id}'"
+
+    document_ids = payload.get("ids") or []
+    delete_all = bool(payload.get("delete_all", False))
+    if not delete_all and not document_ids:
+        return False, "`ids` is required unless `delete_all` is true"
+    if delete_all and document_ids:
+        return False, "Do not provide both `ids` and `delete_all`"
+    if delete_all:
+        document_ids = [doc.id for doc in DocumentService.query(kb_id=dataset_id)]
+    if not isinstance(document_ids, list):
+        return False, "`ids` must be a list"
+
+    doc_ids = _unique_strings(document_ids)
+    dataset_doc_ids = {doc.id for doc in DocumentService.query(kb_id=dataset_id)}
+    invalid_ids = [doc_id for doc_id in doc_ids if doc_id not in dataset_doc_ids]
+    if invalid_ids:
+        return False, (
+            f"These documents do not belong to dataset {dataset_id} or Document not found: "
+            f"{', '.join(invalid_ids)}"
+        )
+
+    errors = FileService.delete_docs(doc_ids, kb.tenant_id)
+    if errors:
+        return False, errors
+    return True, {"deleted": len(doc_ids)}
+
+
+def batch_update_document_status(user_id: str, dataset_id: str, payload: dict[str, Any]):
+    try:
+        KnowledgebaseService.get_record(dataset_id, user_id)
+    except KnowledgebaseNotFound:
+        return False, f"User '{user_id}' lacks permission for dataset '{dataset_id}'"
+
+    document_ids = payload.get("doc_ids") or []
+    status = str(payload.get("status", ""))
+    if not isinstance(document_ids, list) or not document_ids:
+        return False, "`doc_ids` must be a non-empty list"
+    if status not in {"0", "1"}:
+        return False, "`status` must be 0 or 1"
+
+    doc_ids = _unique_strings(document_ids)
+    dataset_doc_ids = {doc.id for doc in DocumentService.query(kb_id=dataset_id)}
+    invalid_ids = [doc_id for doc_id in doc_ids if doc_id not in dataset_doc_ids]
+    if invalid_ids:
+        return False, (
+            f"These documents do not belong to dataset {dataset_id} or Document not found: "
+            f"{', '.join(invalid_ids)}"
+        )
+
+    for doc_id in doc_ids:
+        DocumentService.update_by_id(doc_id, {"status": status})
+    return True, {"updated": len(doc_ids)}
+
+
+def get_document_file(user_id: str, document_id: str, dataset_id: str | None = None):
+    exists, doc = DocumentService.get_by_id(document_id)
+    if not exists or doc is None:
+        return False, "Document not found!"
+
+    if dataset_id is not None and doc.kb_id != dataset_id:
+        return False, f"The dataset does not own the document {document_id}."
+
+    try:
+        KnowledgebaseService.get_record(doc.kb_id, user_id)
+    except KnowledgebaseNotFound:
+        return False, "No authorization."
+
+    bucket, name = File2DocumentService.get_storage_address(doc_id=document_id)
+    data = FileService.get_original_bytes(bucket, name)
+    return True, {
+        "data": data,
+        "name": doc.name or document_id,
+        "suffix": doc.suffix or "",
+        "type": doc.type,
+    }
 
 
 def _run_one_document(

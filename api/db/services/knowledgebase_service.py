@@ -31,6 +31,7 @@ class KnowledgebaseService:
     def list(cls, user_id: str) -> list[dict[str, Any]]:
         connect_db()
         tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
+        user = UserService.get_active_user(user_id)
         with DB.connection_context():
             records = (
                 cls.model.select()
@@ -40,11 +41,14 @@ class KnowledgebaseService:
                 )
                 .order_by(cls.model.create_time.desc(), cls.model.name.asc())
             )
-            return [record.to_api() for record in records]
+            return [_with_owner(record.to_api(), user) for record in records]
 
     @classmethod
     def get(cls, kb_id: str, user_id: str) -> dict[str, Any]:
-        return cls.get_record(kb_id, user_id).to_api()
+        return _with_owner(
+            cls.get_record(kb_id, user_id).to_api(),
+            UserService.get_active_user(user_id),
+        )
 
     @classmethod
     def get_record(cls, kb_id: str, user_id: str) -> Knowledgebase:
@@ -169,6 +173,14 @@ def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any])
 
 def _current_timestamp() -> int:
     return int(time.time() * 1000)
+
+
+def _with_owner(data: dict[str, Any], user: Any) -> dict[str, Any]:
+    return {
+        **data,
+        "nickname": getattr(user, "nickname", "") or data.get("created_by", ""),
+        "tenant_avatar": getattr(user, "avatar", "") or "",
+    }
 
 
 def _normalize_permission(value: Any) -> str:
