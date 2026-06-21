@@ -16,6 +16,7 @@ module.exports = {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			'bg-base': 'var(--bg-base)',
+  			'bg-title': 'var(--bg-title)',
   			'bg-card': 'var(--bg-card)',
   			'bg-component': 'var(--bg-component)',
   			'bg-input': 'var(--bg-input)',

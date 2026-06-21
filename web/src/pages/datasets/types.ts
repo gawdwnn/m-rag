@@ -13,6 +13,10 @@ export type Knowledgebase = {
   token_num: number;
   chunk_count: number;
   status: string;
+  avatar?: string;
+  nickname?: string;
+  tenant_avatar?: string;
+  update_time?: number;
   created_at: string;
   updated_at: string;
 };
@@ -36,8 +40,11 @@ export type DocumentInfo = {
   chunk_count: number;
   progress: number;
   progress_msg: string;
+  process_begin_at: string;
+  process_duration: number;
   run: string;
   status: string;
+  create_time: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -46,6 +53,27 @@ export type DocumentInfo = {
 export type DocumentListResponse = {
   docs: DocumentInfo[];
   total: number;
+};
+
+export type ChunkInfo = {
+  id: string;
+  content: string;
+  document_id: string;
+  docnm_kwd: string;
+  important_keywords: string[];
+  questions: string[];
+  dataset_id: string;
+  image_id: string;
+  available: boolean;
+  positions: unknown[];
+  tag_kwd: string[];
+  tag_feas: Record<string, unknown>;
+};
+
+export type ChunkListResponse = {
+  total: number;
+  chunks: ChunkInfo[];
+  doc: DocumentInfo;
 };
 
 export type CreateKnowledgebaseInput = {

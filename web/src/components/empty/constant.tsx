@@ -1,5 +1,10 @@
 import { Database } from 'lucide-react';
 
+export enum EmptyType {
+  Data = 'data',
+  SearchData = 'search-data',
+}
+
 export enum EmptyCardType {
   Dataset = 'dataset',
 }

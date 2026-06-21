@@ -1,8 +1,33 @@
-import { Plus } from 'lucide-react';
+import { Database, Plus } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
-import { EmptyCardData, type EmptyCardType } from './constant';
+import { EmptyCardData, type EmptyCardType, EmptyType } from './constant';
+
+type EmptyProps = {
+  className?: string;
+  children?: ReactNode;
+  type?: EmptyType;
+  text?: string;
+};
+
+export default function Empty({ className, children, type, text }: EmptyProps) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center gap-2 text-center',
+        className,
+      )}
+    >
+      <Database className="size-8 text-text-secondary" />
+      {children || (
+        <div className="empty-text text-sm text-text-secondary">
+          {text || (type === EmptyType.SearchData ? 'No results' : 'No data')}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type EmptyCardProps = {
   icon?: ReactNode;
