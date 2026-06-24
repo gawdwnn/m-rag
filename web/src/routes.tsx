@@ -14,7 +14,8 @@ export enum Routes {
   Datasets = '/datasets',
   DatasetBase = '/dataset',
   Files = '/files',
-  Dataset = `${Routes.DatasetBase}/${Routes.Files}`,
+  Dataset = `${Routes.DatasetBase}${Routes.Files}`,
+  DatasetTesting = '/retrieval',
   Document = '/document',
   Chunk = '/chunk',
   ParsedResult = `${Routes.Chunk}/parsed-result`,
@@ -108,6 +109,10 @@ const routeConfigOptions: LazyRouteConfig[] = [
           {
             path: `${Routes.Dataset}/:id`,
             Component: () => import('@/pages/dataset/dataset'),
+          },
+          {
+            path: `${Routes.DatasetBase}${Routes.DatasetTesting}/:id`,
+            Component: () => import('@/pages/dataset/testing'),
           },
         ],
       },

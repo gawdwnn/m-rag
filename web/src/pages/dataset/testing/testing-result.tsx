@@ -1,0 +1,122 @@
+import Empty from '@/components/empty/empty';
+import { EmptyType } from '@/components/empty/constant';
+import { FilterButton } from '@/components/list-filter-bar';
+import { FilterPopover } from '@/components/list-filter-bar/filter-popover';
+import type { FilterCollection } from '@/components/list-filter-bar/interface';
+import { Card } from '@/components/ui/card';
+import { RAGFlowPagination } from '@/components/ui/ragflow-pagination';
+import type { RetrievalChunk, RetrievalTestResponse } from '@/pages/datasets/types';
+
+const similarityList: Array<{ field: keyof RetrievalChunk; label: string }> = [
+  { field: 'similarity', label: 'Hybrid Similarity' },
+  { field: 'term_similarity', label: 'Term Similarity' },
+  { field: 'vector_similarity', label: 'Vector Similarity' },
+];
+
+type TestingResultProps = {
+  data: RetrievalTestResponse & { isRuned: boolean };
+  filterValue: { doc_ids: string[] };
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  error: Error | null;
+  handleFilterSubmit: (docIds: string[]) => void;
+  onPaginationChange: (page: number) => void;
+};
+
+export function TestingResult({
+  data,
+  filterValue,
+  page,
+  pageSize,
+  loading,
+  error,
+  handleFilterSubmit,
+  onPaginationChange,
+}: TestingResultProps) {
+  const filters: FilterCollection[] = [
+    {
+      field: 'doc_ids',
+      label: 'File',
+      list: data.doc_aggs.map((doc) => ({
+        id: doc.doc_id,
+        label: doc.doc_name,
+        count: doc.count,
+      })),
+    },
+  ];
+
+  return (
+    <article className="flex size-full flex-col">
+      <header className="flex flex-0 justify-between px-5 py-3">
+        <h2 className="text-base leading-8 font-semibold">Test Results</h2>
+
+        <FilterPopover
+          filters={filters}
+          onChange={handleFilterSubmit}
+          value={filterValue}
+        >
+          <FilterButton />
+        </FilterPopover>
+      </header>
+
+      <div className="h-0 flex-1">
+        {error ? (
+          <div className="p-5 text-sm text-state-error">{error.message}</div>
+        ) : null}
+
+        {loading ? (
+          <div className="grid size-full place-items-center text-sm text-text-secondary">
+            Loading...
+          </div>
+        ) : data.chunks.length > 0 ? (
+          <>
+            <section className="scrollbar-thin flex h-full flex-col gap-5 overflow-auto px-5 pb-5">
+              {data.chunks.map((chunk) => (
+                <article key={chunk.chunk_id}>
+                  <Card className="bg-transparent px-5 py-2.5 shadow-none">
+                    <ChunkTitle item={chunk} />
+                    <p className="!mt-2.5 whitespace-pre-wrap text-sm leading-6">
+                      {chunk.content_with_weight}
+                    </p>
+                    <p className="mt-2 text-xs text-text-secondary">{chunk.docnm_kwd}</p>
+                  </Card>
+                </article>
+              ))}
+            </section>
+
+            <RAGFlowPagination
+              current={page}
+              onChange={onPaginationChange}
+              pageSize={pageSize}
+              total={data.total}
+            />
+          </>
+        ) : (
+          <div className="flex size-full items-center justify-center p-5">
+            <Empty type={EmptyType.SearchData}>
+              <div className="text-sm text-text-secondary">
+                {data.isRuned
+                  ? 'No retrieval results found.'
+                  : 'Run a retrieval test to inspect ranked chunks.'}
+              </div>
+            </Empty>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ChunkTitle({ item }: { item: RetrievalChunk }) {
+  return (
+    <div className="space-x-4 text-xs text-text-secondary italic">
+      {similarityList.map((score) => (
+        <p key={score.field} className="inline">
+          {((Number(item[score.field]) || 0) * 100).toFixed(2)}{' '}
+          <dfn>{score.label}</dfn>
+        </p>
+      ))}
+    </div>
+  );
+}

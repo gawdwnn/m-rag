@@ -20,6 +20,8 @@ export default {
     `${restAPIv1}/datasets/${datasetId}/documents/batch-update-status`,
   documentChunks: (datasetId: string, documentId: string) =>
     `${restAPIv1}/datasets/${datasetId}/documents/${documentId}/chunks`,
+  retrievalTest: `${restAPIv1}/datasets/search`,
+  datasetRetrievalTest: (datasetId: string) => `${restAPIv1}/datasets/${datasetId}/search`,
   documentPreview: (documentId: string) =>
     `${restAPIv1}/documents/${documentId}/preview`,
   getDatasetDocumentFileDownload: (datasetId: string, documentId: string) =>

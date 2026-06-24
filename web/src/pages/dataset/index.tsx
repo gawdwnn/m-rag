@@ -1,5 +1,5 @@
-import { FolderOpen } from 'lucide-react';
-import { Link, Outlet, useParams } from 'react-router';
+import { FolderOpen, Search } from 'lucide-react';
+import { Link, Outlet, useLocation, useParams } from 'react-router';
 
 import { RAGFlowAvatar } from '@/components/ragflow-avatar';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,24 @@ import { Routes } from '@/routes';
 
 export default function DatasetWrapper() {
   const { id: datasetId = null } = useParams();
+  const location = useLocation();
   const datasetQuery = useFetchKnowledgeDetail(datasetId);
   const knowledgeBase = datasetQuery.data ?? null;
+  const datasetTestingPath = `${Routes.DatasetBase}${Routes.DatasetTesting}`;
+  const navItems = [
+    {
+      icon: FolderOpen,
+      label: 'Files',
+      to: datasetId ? `${Routes.Dataset}/${datasetId}` : Routes.Datasets,
+      active: location.pathname.startsWith(Routes.Dataset),
+    },
+    {
+      icon: Search,
+      label: 'Retrieval',
+      to: datasetId ? `${datasetTestingPath}/${datasetId}` : Routes.Datasets,
+      active: location.pathname.startsWith(datasetTestingPath),
+    },
+  ];
 
   return (
     <article className="grid size-full grid-cols-[16rem_minmax(0,1fr)] grid-rows-1 pt-3">
@@ -45,15 +61,23 @@ export default function DatasetWrapper() {
           </div>
         </header>
 
-        <nav className="overflow-y-auto px-5 pb-5 pt-1">
-          <Button
-            type="button"
-            className="h-10 w-full justify-start gap-2.5 px-3 text-base"
-            variant="secondary"
-          >
-            <FolderOpen className="size-[1em]" />
-            <span>Files</span>
-          </Button>
+        <nav className="grid gap-1 overflow-y-auto px-5 pb-5 pt-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                asChild
+                key={item.label}
+                className="h-10 w-full justify-start gap-2.5 px-3 text-base"
+                variant={item.active ? 'secondary' : 'ghost'}
+              >
+                <Link to={item.to}>
+                  <Icon className="size-[1em]" />
+                  <span>{item.label}</span>
+                </Link>
+              </Button>
+            );
+          })}
         </nav>
 
         <div className="mt-auto px-5 pb-5">
