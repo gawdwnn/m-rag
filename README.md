@@ -1,4 +1,4 @@
-# m-ragflow
+# m-rag
 
 RAGFlow learning workspace.
 
