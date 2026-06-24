@@ -43,3 +43,15 @@ class DocStoreConnection(ABC):
         page_size: int = 30,
     ) -> tuple[int, list[dict]]:
         raise NotImplementedError
+
+    @abstractmethod
+    def search(
+        self,
+        index_names: list[str],
+        dataset_ids: list[str],
+        query_vector: list[float],
+        vector_field: str,
+        top: int,
+        doc_ids: list[str] | None = None,
+    ) -> tuple[int, list[dict]]:
+        raise NotImplementedError
