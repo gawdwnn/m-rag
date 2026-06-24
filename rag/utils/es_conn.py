@@ -140,6 +140,60 @@ class ESConnection(DocStoreConnection):
         ]
         return int(total or 0), chunks
 
+    def search(
+        self,
+        index_names: list[str],
+        dataset_ids: list[str],
+        query_vector: list[float],
+        vector_field: str,
+        top: int,
+        doc_ids: list[str] | None = None,
+    ) -> tuple[int, list[dict]]:
+        existing_indexes = [
+            index_name
+            for index_name in index_names
+            if self.index_exist(index_name, dataset_ids[0] if dataset_ids else "")
+        ]
+        if not existing_indexes:
+            return 0, []
+
+        filters: list[dict] = [
+            {"terms": {"kb_id": dataset_ids}},
+            {"term": {"available_int": 1}},
+            {"exists": {"field": vector_field}},
+        ]
+        if doc_ids:
+            filters.append({"terms": {"doc_id": doc_ids}})
+
+        response = self.es.search(
+            index=existing_indexes,
+            query={
+                "script_score": {
+                    "query": {"bool": {"filter": filters}},
+                    "script": {
+                        "source": f"cosineSimilarity(params.query_vector, '{vector_field}') + 1.0",
+                        "params": {"query_vector": query_vector},
+                    },
+                }
+            },
+            size=max(int(top or 1), 1),
+            track_total_hits=True,
+        )
+
+        total = response.get("hits", {}).get("total", 0)
+        if isinstance(total, dict):
+            total = int(total.get("value") or 0)
+
+        chunks = [
+            {
+                "id": hit.get("_id"),
+                "_score": float(hit.get("_score") or 0),
+                **(hit.get("_source") or {}),
+            }
+            for hit in response.get("hits", {}).get("hits", [])
+        ]
+        return int(total or 0), chunks
+
 
 def _mapping(vector_size: int) -> dict:
     vector_name = f"q_{vector_size}_vec"

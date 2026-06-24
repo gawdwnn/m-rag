@@ -4,6 +4,8 @@ load_m_ragflow_env() {
   local root_dir="$1"
   local env_file="$root_dir/.env"
 
+  export PYTHONPATH="$root_dir"
+
   if [ -f "$env_file" ]; then
     set -a
     # shellcheck disable=SC1090

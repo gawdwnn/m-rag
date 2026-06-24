@@ -1,6 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+export { FilterButton } from './filter-popover';
 
 type ListFilterBarProps = PropsWithChildren<{
   leftPanel?: ReactNode;

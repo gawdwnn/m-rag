@@ -3,6 +3,8 @@ import type {
   CreateKnowledgebaseInput,
   DocumentListResponse,
   Knowledgebase,
+  RetrievalTestInput,
+  RetrievalTestResponse,
   UpdateKnowledgebaseInput,
 } from '@/pages/datasets/types';
 import api from '@/utils/api';
@@ -59,6 +61,13 @@ export async function listDocumentChunks({
 }): Promise<ChunkListResponse> {
   return request<ChunkListResponse>(api.documentChunks(datasetId, documentId), {
     params: { page, page_size: pageSize },
+  });
+}
+
+export async function retrievalTest(input: RetrievalTestInput): Promise<RetrievalTestResponse> {
+  return request<RetrievalTestResponse>(api.retrievalTest, {
+    method: 'POST',
+    data: input,
   });
 }
 

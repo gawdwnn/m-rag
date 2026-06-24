@@ -8,4 +8,4 @@ cd "$ROOT_DIR"
 . "$ROOT_DIR/scripts/env.sh"
 load_m_ragflow_env "$ROOT_DIR"
 
-exec uv run python -m worker.main
+exec uv run python rag/svr/task_executor.py

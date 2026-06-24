@@ -76,6 +76,49 @@ export type ChunkListResponse = {
   doc: DocumentInfo;
 };
 
+export type RetrievalChunk = {
+  chunk_id: string;
+  content_ltks: string;
+  content_with_weight: string;
+  doc_id: string;
+  docnm_kwd: string;
+  kb_id: string;
+  important_kwd: string[];
+  tag_kwd: string[];
+  image_id: string;
+  similarity: number;
+  vector_similarity: number;
+  term_similarity: number;
+  positions: unknown[];
+  doc_type_kwd: string;
+  mom_id: string;
+  row_id: string;
+};
+
+export type RetrievalDocumentAggregation = {
+  doc_id: string;
+  doc_name: string;
+  count: number;
+};
+
+export type RetrievalTestInput = {
+  dataset_ids?: string[];
+  question: string;
+  page?: number;
+  size?: number;
+  top_k?: number;
+  similarity_threshold?: number;
+  vector_similarity_weight?: number;
+  doc_ids?: string[];
+};
+
+export type RetrievalTestResponse = {
+  total: number;
+  chunks: RetrievalChunk[];
+  doc_aggs: RetrievalDocumentAggregation[];
+  labels: unknown[];
+};
+
 export type CreateKnowledgebaseInput = {
   name: string;
   embedding_model: string;

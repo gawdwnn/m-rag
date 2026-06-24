@@ -2,7 +2,12 @@ from quart import Blueprint, request
 
 from api.apps import current_user_id, login_required
 from api.apps.services import dataset_api_service
-from api.utils.api_utils import get_error_data_result, get_result, run_db_call
+from api.utils.api_utils import (
+    get_error_argument_result,
+    get_error_data_result,
+    get_result,
+    run_db_call,
+)
 
 manager = Blueprint("dataset_api", __name__)
 
@@ -24,6 +29,43 @@ async def create():
     success, result = await dataset_api_service.create_dataset(current_user_id(), req)
     if success:
         return get_result(data=result), 201
+    return get_error_data_result(message=result)
+
+
+@manager.post("/datasets/search")
+@login_required
+async def search_datasets():
+    req = await request.get_json(silent=True) or {}
+    if not isinstance(req.get("dataset_ids"), list) or not req.get("dataset_ids"):
+        return get_error_argument_result("dataset_ids is required.")
+    if not str(req.get("question") or "").strip():
+        return get_error_argument_result("question is required.")
+
+    success, result = await run_db_call(
+        dataset_api_service.search_datasets,
+        current_user_id(),
+        req,
+    )
+    if success:
+        return get_result(data=result)
+    return get_error_data_result(message=result)
+
+
+@manager.post("/datasets/<dataset_id>/search")
+@login_required
+async def search(dataset_id: str):
+    req = await request.get_json(silent=True) or {}
+    if not str(req.get("question") or "").strip():
+        return get_error_argument_result("question is required.")
+    req["dataset_ids"] = [dataset_id]
+
+    success, result = await run_db_call(
+        dataset_api_service.search_datasets,
+        current_user_id(),
+        req,
+    )
+    if success:
+        return get_result(data=result)
     return get_error_data_result(message=result)
 
 

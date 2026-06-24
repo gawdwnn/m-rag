@@ -1,5 +1,6 @@
 from api.config import load_api_config
 from api.storage import get_storage
+from rag.nlp.search import Dealer
 from rag.utils.es_conn import ESConnection
 
 STORAGE_IMPL = get_storage()
@@ -12,6 +13,7 @@ if DOC_ENGINE.lower() != "elasticsearch":
     raise RuntimeError(f"Not supported doc engine: {DOC_ENGINE}")
 
 docStoreConn = ESConnection()
+retriever = Dealer()
 
 
 def get_svr_queue_name(priority: int, suffix: str = "common") -> str:
