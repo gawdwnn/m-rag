@@ -284,3 +284,7 @@ def set_progress(task_id: str, prog: float | None = None, msg: str = "Processing
 
 def _format_message(message: str) -> str:
     return f"{datetime.now().strftime('%H:%M:%S')} {message}"
+
+
+if __name__ == "__main__":
+    main()
