@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiPort = env.M_RAGFLOW_API_PORT || '9380';
+  const apiPort = env.RAG_API_PORT || '9380';
 
   return {
     plugins: [react()],
@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: Number(env.M_RAGFLOW_WEB_PORT) || 9222,
+      port: Number(env.RAG_WEB_PORT) || 9222,
       strictPort: false,
       proxy: {
         '/api': {

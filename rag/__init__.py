@@ -1,1 +1,1 @@
-"""Focused RAGFlow runtime package."""
+"""Focused RAG runtime package."""

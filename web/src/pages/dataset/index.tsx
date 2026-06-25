@@ -1,7 +1,7 @@
 import { FolderOpen, Search } from 'lucide-react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
 
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGAvatar } from '@/components/rag-avatar';
 import { Button } from '@/components/ui/button';
 import { useFetchKnowledgeDetail } from '@/hooks/use-knowledge-request';
 import { Routes } from '@/routes';
@@ -34,7 +34,7 @@ export default function DatasetWrapper() {
           className="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-x-3 px-5 pb-4"
           style={{ gridTemplateAreas: '"avatar title" "avatar stats"' }}
         >
-          <RAGFlowAvatar
+          <RAGAvatar
             avatar={knowledgeBase?.avatar}
             name={knowledgeBase?.name}
             className="size-16"

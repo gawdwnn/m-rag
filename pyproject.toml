@@ -1,7 +1,7 @@
 [project]
-name = "m-ragflow"
+name = "m-rag"
 version = "0.1.0"
-description = "Focused RAGFlow learning workspace built one runnable slice at a time."
+description = "Focused RAG learning workspace built one runnable slice at a time."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
