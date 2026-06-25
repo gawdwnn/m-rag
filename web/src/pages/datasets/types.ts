@@ -123,6 +123,7 @@ export type CreateKnowledgebaseInput = {
   name: string;
   embedding_model: string;
   chunk_method: string;
+  parser_config?: Record<string, unknown>;
 };
 
 export type UpdateKnowledgebaseInput = Partial<

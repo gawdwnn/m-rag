@@ -10,10 +10,16 @@ from api.db.services.user_service import UserService
 
 DEFAULT_PARSER_CONFIG = {
     "pages": [[1, 1000000]],
+    "chunk_token_num": 128,
+    "delimiter": "\n!?;。；！？",
+    "children_delimiter": "",
+    "layout_recognize": "DeepDOC",
     "table_context_size": 0,
     "image_context_size": 0,
+    "overlapped_percent": 0,
 }
 VALID_STATUS = "1"
+SUPPORTED_PARSER_IDS = {"general", "naive"}
 
 
 class KnowledgebaseNotFound(Exception):
@@ -158,6 +164,10 @@ def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any])
         raise KnowledgebaseValidationError("parser_config must be an object.")
     parser_config["llm_id"] = tenant_defaults["llm_id"]
 
+    chunk_method = str(payload.get("chunk_method", "naive")).strip() or "naive"
+    if chunk_method not in SUPPORTED_PARSER_IDS:
+        raise KnowledgebaseValidationError(f"Unsupported chunk method: {chunk_method}.")
+
     return {
         "name": name,
         "description": str(payload.get("description", "")).strip(),
@@ -166,7 +176,7 @@ def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any])
         ).strip()
         or tenant_defaults["embd_id"],
         "permission": _normalize_permission(payload.get("permission", "me")),
-        "chunk_method": str(payload.get("chunk_method", "naive")).strip() or "naive",
+        "chunk_method": chunk_method,
         "parser_config": parser_config,
     }
 
