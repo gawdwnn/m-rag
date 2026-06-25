@@ -1,1 +1,1 @@
-"""Utility helpers for the focused RAGFlow API."""
+"""Utility helpers for the focused RAG API."""

@@ -34,7 +34,7 @@ function getColorForName(name?: string) {
   return PREDEFINED_COLORS[getStringHash(name) % PREDEFINED_COLORS.length];
 }
 
-export function RAGFlowAvatar({
+export function RAGAvatar({
   avatar,
   name,
   className,

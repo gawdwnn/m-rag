@@ -58,7 +58,7 @@ export function LoginPage() {
         <CardHeader>
           <CardTitle>{isRegister ? 'Create account' : 'Sign in'}</CardTitle>
           <CardDescription>
-            {isRegister ? 'Register a user and tenant workspace.' : 'Use your RAGFlow account.'}
+            {isRegister ? 'Register a user and tenant workspace.' : 'Use your RAG account.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

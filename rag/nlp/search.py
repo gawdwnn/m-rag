@@ -4,7 +4,7 @@ from typing import Any
 
 
 def index_name(uid: str) -> str:
-    return f"ragflow_{uid}"
+    return f"rag_{uid}"
 
 
 class Dealer:

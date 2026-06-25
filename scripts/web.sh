@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 # shellcheck source=scripts/env.sh
 . "$ROOT_DIR/scripts/env.sh"
-load_m_ragflow_env "$ROOT_DIR"
+load_rag_env "$ROOT_DIR"
 
 cd web
 exec npm run dev

@@ -28,7 +28,7 @@ export function Header({
           to={Routes.Root}
           aria-current={pathname === Routes.Root ? 'page' : undefined}
         >
-          <img src="/logo.svg" alt="m-ragflow logo" className="size-10" />
+          <img src="/logo.svg" alt="RAG logo" className="size-10" />
         </Link>
       </div>
 

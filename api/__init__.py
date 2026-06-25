@@ -1,1 +1,1 @@
-"""Backend API package for m-ragflow."""
+"""Backend API package for the focused RAG workspace."""

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGAvatar } from '@/components/rag-avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type HomeCardProps = {
@@ -22,7 +22,7 @@ export function HomeCard({ data, moreDropdown, sharedBadge, onClick }: HomeCardP
       tabIndex={0}
       className="group flex h-full w-full cursor-pointer items-start gap-2 px-2.5 py-4 transition-shadow hover:shadow-md"
     >
-      <RAGFlowAvatar className="size-8" avatar={data.avatar} name={data.name} />
+      <RAGAvatar className="size-8" avatar={data.avatar} name={data.name} />
 
       <div className="w-0 flex-1">
         <CardHeader className="flex-row items-center gap-2 space-y-0 p-0">
