@@ -212,17 +212,41 @@ export function DatasetCreatingDialog({
 }
 
 function parseTenantParserIds(parserIds: string) {
-  const values = parserIds
-    .split(/[,\s]+/)
-    .map((value) => value.trim())
+  const values = parserIds.includes(',')
+    ? parserIds.split(',')
+    : parserIds.split(/\s+/);
+  const uniqueValues = values
+    .map(parseParserOption)
+    .filter((option): option is { value: string; label: string } => Boolean(option?.value));
+  return uniqueValues.length > 0 ? Array.from(new Map(uniqueValues.map((option) => [
+    option.value,
+    option,
+  ])).values()) : [{ value: 'naive', label: 'General' }];
+}
+
+function parseParserOption(value: string) {
+  const [parserId, label] = value
+    .split(':')
+    .map((item) => item.trim())
     .filter(Boolean);
-  const uniqueValues = values.length > 0 ? Array.from(new Set(values)) : ['naive'];
-  return uniqueValues.map((value) => ({
-    value,
-    label: displayParserId(value),
-  }));
+  if (!parserId) {
+    return null;
+  }
+  return {
+    value: parserId,
+    label: label || displayParserId(parserId),
+  };
 }
 
 function displayParserId(value: string) {
-  return value === 'naive' ? 'general' : value.replaceAll('_', ' ');
+  if (value === 'naive') {
+    return 'General';
+  }
+  if (value === 'qa') {
+    return 'Q&A';
+  }
+  if (value === 'one') {
+    return 'One';
+  }
+  return value.replaceAll('_', ' ');
 }

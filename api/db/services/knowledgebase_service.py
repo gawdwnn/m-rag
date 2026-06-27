@@ -7,6 +7,7 @@ from peewee import DoesNotExist
 
 from api.db.db_models import DB, Knowledgebase, connect_db
 from api.db.services.user_service import UserService
+from common.constants import ParserType
 
 DEFAULT_PARSER_CONFIG = {
     "pages": [[1, 1000000]],
@@ -19,7 +20,6 @@ DEFAULT_PARSER_CONFIG = {
     "overlapped_percent": 0,
 }
 VALID_STATUS = "1"
-SUPPORTED_PARSER_IDS = {"general", "naive"}
 
 
 class KnowledgebaseNotFound(Exception):
@@ -165,7 +165,7 @@ def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any])
     parser_config["llm_id"] = tenant_defaults["llm_id"]
 
     chunk_method = str(payload.get("chunk_method", "naive")).strip() or "naive"
-    if chunk_method not in SUPPORTED_PARSER_IDS:
+    if not _valid_chunk_method(chunk_method):
         raise KnowledgebaseValidationError(f"Unsupported chunk method: {chunk_method}.")
 
     return {
@@ -198,6 +198,10 @@ def _normalize_permission(value: Any) -> str:
     if permission not in {"me", "team"}:
         raise KnowledgebaseValidationError("permission must be 'me' or 'team'.")
     return permission
+
+
+def _valid_chunk_method(chunk_method: str) -> bool:
+    return chunk_method == "general" or ParserType.valid(chunk_method)
 
 
 def _deduplicate_name(name: str, tenant_id: str) -> str:

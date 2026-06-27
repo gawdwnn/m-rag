@@ -8,4 +8,4 @@ cd "$ROOT_DIR"
 . "$ROOT_DIR/scripts/env.sh"
 load_rag_env "$ROOT_DIR"
 
-exec uv run python rag/svr/task_executor.py
+exec uv run python rag/svr/task_executor.py --type "${WORKER_TASK_TYPE:-common}" --index "${WORKER_INDEX:-0}" "$@"

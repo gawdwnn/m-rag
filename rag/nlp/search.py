@@ -43,8 +43,7 @@ class Dealer:
         vector_similarity_weight = _clamp(float(vector_similarity_weight or 0), 0, 1)
         term_similarity_weight = 1 - vector_similarity_weight
 
-        vectors, _token_count = embd_mdl.encode([question])
-        query_vector = vectors[0] if vectors else []
+        query_vector, _token_count = embd_mdl.encode_queries(question)
         if not query_vector:
             return ranks
 

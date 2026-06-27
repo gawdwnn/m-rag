@@ -23,7 +23,16 @@ export function isParserRunning(run: string) {
 }
 
 export function displayChunkMethod(method: string) {
-  return method === 'naive' ? 'general' : method;
+  if (method === 'naive') {
+    return 'General';
+  }
+  if (method === 'qa') {
+    return 'Q&A';
+  }
+  if (method === 'one') {
+    return 'One';
+  }
+  return method;
 }
 
 export function progressPercent(progress: number) {
