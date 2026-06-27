@@ -73,13 +73,13 @@ export function FileUploadDialog({
                 Click to select files
               </span>
               <span className="text-xs text-text-secondary">
-                TXT, Markdown, PDF, DOC, and DOCX files are accepted.
+                TXT and Markdown files are accepted for the active parser path.
               </span>
               <Input
                 id={inputId}
                 type="file"
                 multiple
-                accept=".txt,.md,.pdf,.doc,.docx"
+                accept=".txt,.md"
                 className="mx-auto max-w-sm bg-bg-base"
                 onChange={(event) =>
                   setFiles(Array.from(event.currentTarget.files ?? []))

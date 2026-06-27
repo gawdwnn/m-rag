@@ -7,11 +7,18 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.db.db_models import DB, Tenant, TenantLLM, User, connect_db
 from api.utils.crypt import decrypt
+from common.constants import ParserType
 
 VALID_STATUS = "1"
 DEFAULT_CHAT_MODEL_ID = "qwen-plus"
 DEFAULT_EMBEDDING_MODEL_ID = "bge-m3"
-DEFAULT_PARSER_IDS = "naive"
+DEFAULT_PARSER_IDS = ",".join(
+    [
+        f"{ParserType.NAIVE.value}:General",
+        f"{ParserType.QA.value}:Q&A",
+        f"{ParserType.ONE.value}:One",
+    ]
+)
 
 
 class AuthenticationError(Exception):
@@ -138,6 +145,9 @@ class UserService:
             changed = True
         if tenant.tenant_embd_id != embedding_llm.id:
             tenant.tenant_embd_id = embedding_llm.id
+            changed = True
+        if not tenant.parser_ids or tenant.parser_ids in {"naive", "naive one qa"}:
+            tenant.parser_ids = DEFAULT_PARSER_IDS
             changed = True
         if changed:
             tenant.update_date = datetime.utcnow()

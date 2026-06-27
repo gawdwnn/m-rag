@@ -193,7 +193,7 @@ class Tenant(BaseModel):
     tenant_llm_id = IntegerField(null=True, index=True)
     embd_id = CharField(max_length=128, default="bge-m3", index=True)
     tenant_embd_id = IntegerField(null=True, index=True)
-    parser_ids = CharField(max_length=256, default="naive", index=True)
+    parser_ids = CharField(max_length=256, default="naive:General,qa:Q&A,one:One", index=True)
     status = CharField(max_length=1, null=True, default="1", index=True)
     create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
     create_date = DateTimeField(default=datetime.utcnow, index=True)
