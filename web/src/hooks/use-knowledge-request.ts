@@ -100,7 +100,7 @@ export function useTestRetrieval(datasetId: string | null) {
         size: pageSize,
         doc_ids: nextValues?.doc_ids ?? filterValue.doc_ids,
       };
-      return retrievalTest(payload);
+      return retrievalTest(payload, datasetId);
     },
   });
 

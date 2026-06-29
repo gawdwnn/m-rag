@@ -58,6 +58,13 @@ def search_datasets(user_id: str, req: dict[str, Any]):
     if not question:
         return False, "question is required."
 
+    unsupported = _unsupported_retrieval_features(req)
+    if unsupported:
+        return False, (
+            "Unsupported retrieval features in this block: "
+            + ", ".join(unsupported)
+        )
+
     try:
         records = [
             KnowledgebaseService.get_record(dataset_id, user_id)
@@ -127,3 +134,28 @@ def _float_between(value: Any, low: float, high: float, default: float) -> float
     except (TypeError, ValueError):
         parsed = default
     return max(low, min(parsed, high))
+
+
+def _unsupported_retrieval_features(req: dict[str, Any]) -> list[str]:
+    unsupported = []
+    if req.get("search_id"):
+        unsupported.append("search_id")
+    if req.get("rerank_id"):
+        unsupported.append("rerank_id")
+    if req.get("use_kg"):
+        unsupported.append("use_kg")
+    if req.get("keyword"):
+        unsupported.append("keyword")
+    if req.get("cross_languages"):
+        unsupported.append("cross_languages")
+    if _has_metadata_filter(req.get("meta_data_filter")):
+        unsupported.append("meta_data_filter")
+    return unsupported
+
+
+def _has_metadata_filter(value: Any) -> bool:
+    if not value:
+        return False
+    if not isinstance(value, dict):
+        return True
+    return any(bool(item) for item in value.values())
