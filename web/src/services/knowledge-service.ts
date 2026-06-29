@@ -64,11 +64,17 @@ export async function listDocumentChunks({
   });
 }
 
-export async function retrievalTest(input: RetrievalTestInput): Promise<RetrievalTestResponse> {
-  return request<RetrievalTestResponse>(api.retrievalTest, {
-    method: 'POST',
-    data: input,
-  });
+export async function retrievalTest(
+  input: RetrievalTestInput,
+  datasetId?: string | null,
+): Promise<RetrievalTestResponse> {
+  return request<RetrievalTestResponse>(
+    datasetId ? api.datasetRetrievalTest(datasetId) : api.retrievalTest,
+    {
+      method: 'POST',
+      data: input,
+    },
+  );
 }
 
 export async function uploadDocument(datasetId: string, files: File[]): Promise<DocumentListResponse> {

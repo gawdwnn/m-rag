@@ -110,6 +110,20 @@ export type RetrievalTestInput = {
   similarity_threshold?: number;
   vector_similarity_weight?: number;
   doc_ids?: string[];
+  rerank_id?: string;
+  use_kg?: boolean;
+  keyword?: boolean;
+  cross_languages?: string[];
+  meta_data_filter?: {
+    method?: string;
+    logic?: string;
+    manual?: Array<{
+      key: string;
+      op: string;
+      value: string | string[];
+    }>;
+    semi_auto?: Array<string | { key: string; op?: string }>;
+  };
 };
 
 export type RetrievalTestResponse = {

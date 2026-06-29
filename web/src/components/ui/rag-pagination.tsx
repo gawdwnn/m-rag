@@ -2,19 +2,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
-type RAGFlowPaginationProps = {
+type RAGPaginationProps = {
   total: number;
   current: number;
   pageSize: number;
   onChange: (page: number) => void;
 };
 
-export function RAGFlowPagination({
+export function RAGPagination({
   total,
   current,
   pageSize,
   onChange,
-}: RAGFlowPaginationProps) {
+}: RAGPaginationProps) {
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
 
   if (pageCount <= 1) {

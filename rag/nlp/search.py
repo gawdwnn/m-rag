@@ -59,6 +59,7 @@ class Dealer:
         if total == 0 or not candidates:
             return ranks
 
+        post_threshold = 0.0 if vector_similarity_weight <= 0 else similarity_threshold
         scored: list[dict[str, Any]] = []
         for candidate in candidates:
             vector_similarity = _vector_similarity(candidate.get("_score", 0))
@@ -71,7 +72,7 @@ class Dealer:
                 term_similarity_weight * term_similarity
                 + vector_similarity_weight * vector_similarity
             )
-            if similarity < similarity_threshold:
+            if similarity < post_threshold:
                 continue
             scored.append(
                 {
@@ -111,7 +112,11 @@ class Dealer:
                         "count": 0,
                     }
                 doc_aggs[doc_name]["count"] += 1
-            ranks["doc_aggs"] = list(doc_aggs.values())
+            ranks["doc_aggs"] = sorted(
+                doc_aggs.values(),
+                key=lambda item: item["count"],
+                reverse=True,
+            )
 
         return ranks
 

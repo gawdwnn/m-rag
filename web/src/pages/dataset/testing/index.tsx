@@ -13,9 +13,9 @@ export default function RetrievalTesting() {
       <Card className="flex size-full flex-col bg-transparent shadow-none">
         <CardHeader className="border-b-0.5 border-border-button p-5">
           <header>
-            <CardTitle>Retrieval Testing</CardTitle>
+            <CardTitle>Retrieval testing</CardTitle>
             <CardDescription>
-              Test whether indexed chunks can be found before building Search or Chat.
+              Conduct a retrieval test to check if RAG can recover the intended content for the LLM.
             </CardDescription>
           </header>
         </CardHeader>
@@ -23,7 +23,7 @@ export default function RetrievalTesting() {
         <CardContent className="grid flex-1 grid-cols-2 grid-rows-1 divide-x-0.5 overflow-hidden p-0">
           <article className="flex size-full flex-1 flex-col">
             <header className="px-5 py-3">
-              <h2 className="text-base leading-8 font-semibold">Test Settings</h2>
+              <h2 className="text-base leading-8 font-semibold">Setting</h2>
             </header>
 
             <div className="h-0 flex-1">

@@ -4,13 +4,13 @@ import { FilterButton } from '@/components/list-filter-bar';
 import { FilterPopover } from '@/components/list-filter-bar/filter-popover';
 import type { FilterCollection } from '@/components/list-filter-bar/interface';
 import { Card } from '@/components/ui/card';
-import { RAGFlowPagination } from '@/components/ui/ragflow-pagination';
+import { RAGPagination } from '@/components/ui/rag-pagination';
 import type { RetrievalChunk, RetrievalTestResponse } from '@/pages/datasets/types';
 
 const similarityList: Array<{ field: keyof RetrievalChunk; label: string }> = [
-  { field: 'similarity', label: 'Hybrid Similarity' },
-  { field: 'term_similarity', label: 'Term Similarity' },
-  { field: 'vector_similarity', label: 'Vector Similarity' },
+  { field: 'similarity', label: 'Hybrid similarity' },
+  { field: 'term_similarity', label: 'Term similarity' },
+  { field: 'vector_similarity', label: 'Vector similarity' },
 ];
 
 type TestingResultProps = {
@@ -49,7 +49,7 @@ export function TestingResult({
   return (
     <article className="flex size-full flex-col">
       <header className="flex flex-0 justify-between px-5 py-3">
-        <h2 className="text-base leading-8 font-semibold">Test Results</h2>
+        <h2 className="text-base leading-8 font-semibold">Results</h2>
 
         <FilterPopover
           filters={filters}
@@ -85,7 +85,7 @@ export function TestingResult({
               ))}
             </section>
 
-            <RAGFlowPagination
+            <RAGPagination
               current={page}
               onChange={onPaginationChange}
               pageSize={pageSize}
@@ -97,8 +97,8 @@ export function TestingResult({
             <Empty type={EmptyType.SearchData}>
               <div className="text-sm text-text-secondary">
                 {data.isRuned
-                  ? 'No retrieval results found.'
-                  : 'Run a retrieval test to inspect ranked chunks.'}
+                  ? 'No relevant results found. Try adjusting your query or parameters.'
+                  : 'No test has been run yet. Results will appear here.'}
               </div>
             </Empty>
           </div>

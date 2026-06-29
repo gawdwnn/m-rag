@@ -2,10 +2,20 @@ import { Send } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 import { ButtonLoading } from '@/components/button-loading';
+import { CrossLanguageFormField } from '@/components/cross-language-form-field';
 import { FormContainer } from '@/components/form-container';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { MetadataFilter } from '@/components/metadata-filter';
+import {
+  RerankFormFields,
+  initialTopKValue,
+} from '@/components/rerank';
+import {
+  SimilaritySliderFormField,
+  initialSimilarityThresholdValue,
+  initialVectorSimilarityWeightValue,
+} from '@/components/similarity-slider';
 import { Textarea } from '@/components/ui/textarea';
+import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import type { RetrievalTestInput } from '@/pages/datasets/types';
 
 type TestingFormProps = {
@@ -23,12 +33,13 @@ export default function TestingForm({
 }: TestingFormProps) {
   const [question, setQuestion] = useState(values.question || '');
   const [similarityThreshold, setSimilarityThreshold] = useState(
-    values.similarity_threshold ?? 0.2,
+    values.similarity_threshold ?? initialSimilarityThresholdValue.similarity_threshold,
   );
   const [vectorSimilarityWeight, setVectorSimilarityWeight] = useState(
-    values.vector_similarity_weight ?? 0.3,
+    values.vector_similarity_weight ??
+      initialVectorSimilarityWeightValue.vector_similarity_weight,
   );
-  const [topK, setTopK] = useState(values.top_k ?? 1024);
+  const [topK, setTopK] = useState(values.top_k ?? initialTopKValue.top_k);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,34 +60,20 @@ export default function TestingForm({
       <div className="h-0 flex-1 px-5">
         <FormContainer className="h-full overflow-auto p-5">
           <div className="grid gap-5">
-            <TestingNumberField
-              id="similarity-threshold"
-              label="Similarity threshold"
-              max={1}
-              min={0}
-              onChange={setSimilarityThreshold}
-              step={0.01}
-              value={similarityThreshold}
+            <SimilaritySliderFormField
+              similarityThreshold={similarityThreshold}
+              vectorSimilarityWeight={vectorSimilarityWeight}
+              onSimilarityThresholdChange={setSimilarityThreshold}
+              onVectorSimilarityWeightChange={setVectorSimilarityWeight}
             />
-
-            <TestingNumberField
-              id="vector-weight"
-              label="Vector similarity weight"
-              max={1}
-              min={0}
-              onChange={setVectorSimilarityWeight}
-              step={0.01}
-              value={vectorSimilarityWeight}
-            />
-
-            <TestingNumberField
-              id="top-k"
-              label="Top K"
-              max={2048}
-              min={1}
-              onChange={setTopK}
-              step={1}
-              value={topK}
+            <RerankFormFields topK={topK} onTopKChange={setTopK} />
+            <UseKnowledgeGraphFormField />
+            <CrossLanguageFormField />
+            <MetadataFilter />
+            <input
+              name="dataset_ids"
+              type="hidden"
+              value={(values.dataset_ids ?? []).join(',')}
             />
           </div>
         </FormContainer>
@@ -87,7 +84,7 @@ export default function TestingForm({
           <span className="sr-only">Question</span>
           <Textarea
             id="retrieval-question"
-            placeholder="Enter a retrieval test question"
+            placeholder="Input your question here!"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
           />
@@ -95,49 +92,11 @@ export default function TestingForm({
 
         <div className="mt-2.5 text-end">
           <ButtonLoading type="submit" disabled={!question.trim()} loading={loading}>
-            Test
+            Run
             <Send />
           </ButtonLoading>
         </div>
       </footer>
     </form>
-  );
-}
-
-function TestingNumberField({
-  id,
-  label,
-  max,
-  min,
-  onChange,
-  step,
-  value,
-}: {
-  id: string;
-  label: string;
-  max: number;
-  min: number;
-  onChange: (value: number) => void;
-  step: number;
-  value: number;
-}) {
-  return (
-    <label className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        max={max}
-        min={min}
-        step={step}
-        type="number"
-        value={value}
-        onChange={(event) => {
-          const nextValue = Number(event.target.value);
-          if (Number.isFinite(nextValue)) {
-            onChange(nextValue);
-          }
-        }}
-      />
-    </label>
   );
 }
