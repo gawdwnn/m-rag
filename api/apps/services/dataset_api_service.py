@@ -98,11 +98,12 @@ def search_datasets(user_id: str, req: dict[str, Any]):
     )
 
     kb = records[0]
+    tenant_ids = sorted({record.tenant_id for record in records})
     embd_mdl = LLMBundle(kb.tenant_id, kb.embd_id, lang=kb.language or "English")
     ranks = settings.retriever.retrieval(
         question,
         embd_mdl,
-        [kb.tenant_id],
+        tenant_ids,
         dataset_ids,
         page,
         size,
@@ -111,7 +112,7 @@ def search_datasets(user_id: str, req: dict[str, Any]):
         doc_ids=[str(value) for value in doc_ids] if doc_ids else [],
         top=top_k,
     )
-    ranks["chunks"] = settings.retriever.retrieval_by_children(ranks["chunks"], [kb.tenant_id])
+    ranks["chunks"] = settings.retriever.retrieval_by_children(ranks["chunks"], tenant_ids)
     ranks["labels"] = []
 
     for chunk in ranks["chunks"]:

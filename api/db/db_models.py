@@ -204,6 +204,23 @@ class Tenant(BaseModel):
         table_name = "tenant"
 
 
+class UserTenant(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    user_id = CharField(max_length=32, null=False, index=True)
+    tenant_id = CharField(max_length=32, null=False, index=True)
+    role = CharField(max_length=32, null=False, index=True)
+    invited_by = CharField(max_length=32, null=False, index=True)
+    status = CharField(max_length=1, null=True, default="1", index=True)
+    create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    create_date = DateTimeField(default=datetime.utcnow, index=True)
+    update_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    update_date = DateTimeField(default=datetime.utcnow, index=True)
+
+    class Meta:
+        table_name = "user_tenant"
+        indexes = ((("user_id", "tenant_id"), True),)
+
+
 class TenantLLM(BaseModel):
     id = PrimaryKeyField()
     tenant_id = CharField(max_length=32, index=True)
@@ -377,6 +394,60 @@ class File2Document(BaseModel):
 
     class Meta:
         table_name = "file2document"
+
+
+class Search(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    avatar = TextField(null=True)
+    tenant_id = CharField(max_length=32, null=False, index=True)
+    name = CharField(max_length=128, null=False, index=True)
+    description = TextField(null=True)
+    created_by = CharField(max_length=32, null=False, index=True)
+    search_config = JSONField(
+        null=False,
+        default={
+            "kb_ids": [],
+            "doc_ids": [],
+            "similarity_threshold": 0.2,
+            "vector_similarity_weight": 0.3,
+            "use_kg": False,
+            "rerank_id": "",
+            "top_k": 1024,
+            "summary": False,
+            "chat_id": "",
+            "llm_setting": {},
+            "chat_settingcross_languages": [],
+            "highlight": False,
+            "keyword": False,
+            "web_search": False,
+            "related_search": False,
+            "query_mindmap": False,
+        },
+    )
+    status = CharField(max_length=1, null=True, default="1", index=True)
+    create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    create_date = DateTimeField(default=datetime.utcnow, index=True)
+    update_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    update_date = DateTimeField(default=datetime.utcnow, index=True)
+
+    class Meta:
+        table_name = "search"
+
+    def to_api(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "avatar": self.avatar or "",
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "description": self.description or "",
+            "created_by": self.created_by,
+            "search_config": self.search_config or {},
+            "status": self.status,
+            "create_time": self.create_time,
+            "update_time": self.update_time,
+            "created_at": _timestamp_to_iso(self.create_time),
+            "updated_at": _timestamp_to_iso(self.update_time),
+        }
 
 
 class Task(BaseModel):

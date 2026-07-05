@@ -19,6 +19,11 @@ class TaskStatus(StrEnum):
     SCHEDULE = "5"
 
 
+class UserTenantRole(StrEnum):
+    OWNER = "owner"
+    NORMAL = "normal"
+
+
 class PipelineTaskType(StrEnum):
     PARSE = "Parse"
     DOWNLOAD = "Download"

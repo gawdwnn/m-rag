@@ -7,8 +7,18 @@ from api.db.services.knowledgebase_service import (
     KnowledgebaseValidationError,
 )
 from api.db.services.llm_service import LLMBundle
+from api.db.services.search_service import (
+    SearchNotFound,
+    SearchService,
+    SearchValidationError,
+)
 from api.db.services.task_service import TaskService
-from api.db.services.user_service import AuthenticationError, UserService
+from api.db.services.user_service import (
+    AuthenticationError,
+    TenantService,
+    UserService,
+    UserTenantService,
+)
 
 __all__ = [
     "AuthenticationError",
@@ -21,6 +31,11 @@ __all__ = [
     "KnowledgebaseService",
     "KnowledgebaseValidationError",
     "LLMBundle",
+    "SearchNotFound",
+    "SearchService",
+    "SearchValidationError",
     "TaskService",
+    "TenantService",
     "UserService",
+    "UserTenantService",
 ]

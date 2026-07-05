@@ -5,9 +5,9 @@ from uuid import uuid4
 from peewee import DoesNotExist, IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from api.db.db_models import DB, Tenant, TenantLLM, User, connect_db
+from api.db.db_models import DB, Tenant, TenantLLM, User, UserTenant, connect_db
 from api.utils.crypt import decrypt
-from common.constants import ParserType
+from common.constants import ParserType, UserTenantRole
 
 VALID_STATUS = "1"
 DEFAULT_CHAT_MODEL_ID = "qwen-plus"
@@ -138,6 +138,7 @@ class UserService:
 
         chat_llm = cls._ensure_tenant_llm(user.id, DEFAULT_CHAT_MODEL_ID, "chat")
         embedding_llm = cls._ensure_tenant_llm(user.id, DEFAULT_EMBEDDING_MODEL_ID, "embedding")
+        UserTenantService.ensure_owner_relation(user.id)
 
         changed = False
         if tenant.tenant_llm_id != chat_llm.id:
@@ -223,6 +224,92 @@ class UserService:
                 & (TenantLLM.llm_factory == "local")
                 & (TenantLLM.llm_name == model_name)
             )
+
+
+class TenantService:
+    model = Tenant
+
+    @classmethod
+    def get_joined_tenants_by_user_id(cls, user_id: str) -> list[dict[str, Any]]:
+        connect_db()
+        with DB.connection_context():
+            records = (
+                cls.model.select(
+                    cls.model.id.alias("tenant_id"),
+                    cls.model.name,
+                    cls.model.llm_id,
+                    cls.model.embd_id,
+                    UserTenant.role,
+                )
+                .join(
+                    UserTenant,
+                    on=(
+                        (cls.model.id == UserTenant.tenant_id)
+                        & (UserTenant.user_id == user_id)
+                        & (UserTenant.status == VALID_STATUS)
+                        & (UserTenant.role == UserTenantRole.NORMAL.value)
+                    ),
+                )
+                .where(cls.model.status == VALID_STATUS)
+                .dicts()
+            )
+            return list(records)
+
+
+class UserTenantService:
+    model = UserTenant
+
+    @classmethod
+    def ensure_owner_relation(cls, user_id: str) -> UserTenant:
+        connect_db()
+        relation, _ = cls.model.get_or_create(
+            user_id=user_id,
+            tenant_id=user_id,
+            defaults={
+                "id": uuid4().hex,
+                "role": UserTenantRole.OWNER.value,
+                "invited_by": user_id,
+            },
+        )
+        changed = False
+        if relation.role != UserTenantRole.OWNER.value:
+            relation.role = UserTenantRole.OWNER.value
+            changed = True
+        if relation.status != VALID_STATUS:
+            relation.status = VALID_STATUS
+            changed = True
+        if changed:
+            relation.update_date = datetime.utcnow()
+            relation.save()
+        return relation
+
+    @classmethod
+    def query(cls, **filters: Any) -> list[UserTenant]:
+        connect_db()
+        query = cls.model.select().where(cls.model.status == VALID_STATUS)
+        for key, value in filters.items():
+            query = query.where(getattr(cls.model, key) == value)
+        with DB.connection_context():
+            return list(query)
+
+    @classmethod
+    def get_user_tenant_relation_by_user_id(cls, user_id: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": relation.id,
+                "user_id": relation.user_id,
+                "tenant_id": relation.tenant_id,
+                "role": relation.role,
+            }
+            for relation in cls.query(user_id=user_id)
+        ]
+
+    @classmethod
+    def get_visible_tenant_ids(cls, user_id: str) -> list[str]:
+        relations = cls.query(user_id=user_id)
+        tenant_ids = {relation.tenant_id for relation in relations}
+        tenant_ids.add(user_id)
+        return list(tenant_ids)
 
 
 def _normalize_email(value: Any) -> str:
