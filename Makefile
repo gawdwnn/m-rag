@@ -47,6 +47,7 @@ health:
 check:
 	uv run python -m compileall api common rag
 	uv run --extra dev ruff check api common rag
+	uv run --extra dev pytest test
 	cd web && npm run build
 
 reset-docker-data:
