@@ -49,9 +49,13 @@ export function useLogin() {
 }
 
 export function useRegister() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: IRegisterRequestBody) => {
-      const { data: res } = (await userService.register(params)) as RequestResult<UserInfoType>;
+      const { data: res, response } = (await userService.register(params)) as RequestResult<UserInfoType>;
+      if (res.code === 0) {
+        syncAuthQueries(queryClient, res.data, response.headers.get(Authorization));
+      }
       return res.code;
     },
   });
