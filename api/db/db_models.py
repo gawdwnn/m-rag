@@ -39,6 +39,22 @@ def connect_db() -> None:
         )
     if DB.is_closed():
         DB.connect(reuse_if_open=True)
+        return
+
+    try:
+        connection = DB.connection()
+        ping = getattr(connection, "ping", None)
+        if callable(ping):
+            ping(reconnect=True, attempts=1, delay=0)
+        else:
+            DB.execute_sql("SELECT 1")
+    except Exception:
+        logging.warning("Database connection is stale; reconnecting.", exc_info=True)
+        try:
+            DB.close()
+        except Exception:
+            logging.exception("Failed to close stale database connection.")
+        DB.connect(reuse_if_open=True)
 
 
 def close_db() -> None:
