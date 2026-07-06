@@ -103,6 +103,7 @@ export type RetrievalDocumentAggregation = {
 
 export type RetrievalTestInput = {
   dataset_ids?: string[];
+  search_id?: string;
   question: string;
   page?: number;
   size?: number;
@@ -130,6 +131,7 @@ export type RetrievalTestResponse = {
   total: number;
   chunks: RetrievalChunk[];
   doc_aggs: RetrievalDocumentAggregation[];
+  documents: RetrievalDocumentAggregation[];
   labels: unknown[];
 };
 

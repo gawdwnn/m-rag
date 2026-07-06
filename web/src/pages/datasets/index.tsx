@@ -1,9 +1,11 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Database, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import ListFilterBar from '@/components/list-filter-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   useCreateKnowledge,
   useDeleteKnowledge,
@@ -26,6 +28,7 @@ export function DatasetPage() {
   const datasetsQuery = useFetchKnowledgeList(canFetchDatasets);
   const createMutation = useCreateKnowledge();
   const deleteMutation = useDeleteKnowledge();
+  const [searchString, setSearchString] = React.useState('');
 
   const error = [
     userQuery.error,
@@ -36,6 +39,17 @@ export function DatasetPage() {
   ].find(Boolean);
 
   const datasets = datasetsQuery.data ?? [];
+  const filteredDatasets = React.useMemo(() => {
+    const normalized = searchString.trim().toLowerCase();
+    if (!normalized) {
+      return datasets;
+    }
+    return datasets.filter((dataset) =>
+      [dataset.name, dataset.description, dataset.nickname, dataset.created_by]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalized)),
+    );
+  }, [datasets, searchString]);
 
   React.useEffect(() => {
     if (searchParams.get('isCreate') === 'true') {
@@ -55,28 +69,44 @@ export function DatasetPage() {
 
   return (
     <main className="flex size-full min-h-screen flex-col">
-      <header className="mb-4 flex items-end justify-between gap-4 px-5 pt-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">Datasets</h1>
-          <p className="text-sm text-text-secondary">
-            Create datasets and add files for parsing.
-          </p>
-        </div>
-      </header>
-
-      <div className="mb-4 flex justify-end px-5">
-        <Button
-          type="button"
-          onClick={() => setCreateVisible(true)}
-          disabled={!tenantInfo}
-        >
-          <Plus />
-          Create dataset
-        </Button>
-      </div>
+      {datasets.length || searchString ? (
+        <header className="mb-4 px-5 pt-8">
+          <ListFilterBar
+            leftPanel={
+              <>
+                <Database className="size-6" />
+                Datasets
+              </>
+            }
+            preChildren={
+              <Input
+                className="h-9 w-64"
+                placeholder="Search"
+                value={searchString}
+                onChange={(event) => setSearchString(event.currentTarget.value)}
+              />
+            }
+          >
+            <Button
+              type="button"
+              onClick={() => setCreateVisible(true)}
+              disabled={!tenantInfo}
+            >
+              <Plus className="size-[1em]" />
+              Create dataset
+            </Button>
+          </ListFilterBar>
+        </header>
+      ) : null}
+      {error instanceof Error ? (
+        <Card className="mx-5 mb-4 border-destructive bg-state-error-5 text-destructive">
+          <CardContent className="p-4 text-sm font-medium">{error.message}</CardContent>
+        </Card>
+      ) : null}
       <DatasetList
-        datasets={datasets}
+        datasets={filteredDatasets}
         isLoading={userQuery.isLoading || tenantQuery.isLoading || datasetsQuery.isLoading}
+        isSearching={Boolean(searchString.trim())}
         onCreate={() => setCreateVisible(true)}
         onSelect={(dataset) => navigate(`${Routes.Dataset}/${dataset.id}`)}
         onDelete={(dataset) =>
@@ -92,12 +122,6 @@ export function DatasetPage() {
           onOk={(input) => createMutation.mutateAsync(input).then(() => undefined)}
           loading={createMutation.isPending}
         />
-      ) : null}
-
-      {error instanceof Error ? (
-        <Card className="mx-5 border-destructive bg-state-error-5 text-destructive">
-          <CardContent className="p-4 text-sm font-medium">{error.message}</CardContent>
-        </Card>
       ) : null}
     </main>
   );

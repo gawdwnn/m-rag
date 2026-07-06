@@ -22,6 +22,13 @@ export default {
     `${restAPIv1}/datasets/${datasetId}/documents/${documentId}/chunks`,
   retrievalTest: `${restAPIv1}/datasets/search`,
   datasetRetrievalTest: (datasetId: string) => `${restAPIv1}/datasets/${datasetId}/search`,
+  createSearch: `${restAPIv1}/searches`,
+  getSearchList: `${restAPIv1}/searches`,
+  deleteSearch: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
+  getSearchDetail: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
+  updateSearchSetting: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
+  searchCompletion: (searchId: string) =>
+    `${restAPIv1}/searches/${searchId}/completions`,
   documentPreview: (documentId: string) =>
     `${restAPIv1}/documents/${documentId}/preview`,
   getDatasetDocumentFileDownload: (datasetId: string, documentId: string) =>

@@ -4,6 +4,8 @@ from api.db.services import (
     KnowledgebaseNotFound,
     KnowledgebaseService,
     KnowledgebaseValidationError,
+    SearchNotFound,
+    SearchService,
 )
 from api.db.services.llm_service import LLMBundle
 from common import settings
@@ -50,7 +52,19 @@ async def update_dataset(tenant_id: str, dataset_id: str, req: dict[str, Any]):
 
 
 def search_datasets(user_id: str, req: dict[str, Any]):
-    dataset_ids = [str(value) for value in req.get("dataset_ids", []) if str(value).strip()]
+    search_id = str(req.get("search_id") or "").strip()
+    search_config: dict[str, Any] = {}
+    if search_id:
+        try:
+            search_config = SearchService.get_detail(search_id, user_id).get("search_config") or {}
+        except SearchNotFound:
+            return False, "Invalid search_id"
+
+    dataset_ids = [
+        str(value)
+        for value in (search_config.get("kb_ids") or req.get("dataset_ids", []))
+        if str(value).strip()
+    ]
     if not dataset_ids:
         return False, "dataset_ids is required."
 
@@ -58,7 +72,7 @@ def search_datasets(user_id: str, req: dict[str, Any]):
     if not question:
         return False, "question is required."
 
-    unsupported = _unsupported_retrieval_features(req)
+    unsupported = _unsupported_retrieval_features(req, search_config)
     if unsupported:
         return False, (
             "Unsupported retrieval features in this block: "
@@ -77,32 +91,33 @@ def search_datasets(user_id: str, req: dict[str, Any]):
     if len(embedding_models) != 1:
         return False, "Datasets use different embedding models."
 
-    doc_ids = req.get("doc_ids", [])
+    doc_ids = req.get("doc_ids", search_config.get("doc_ids") or [])
     if doc_ids is not None and not isinstance(doc_ids, list):
         return False, "`doc_ids` should be a list"
 
     page = _positive_int(req.get("page"), 1)
     size = min(_positive_int(req.get("size"), 30), 200)
-    top_k = min(_positive_int(req.get("top_k"), 1024), 2048)
+    top_k = min(_positive_int(search_config.get("top_k", req.get("top_k")), 1024), 2048)
     similarity_threshold = _float_between(
-        req.get("similarity_threshold"),
+        search_config.get("similarity_threshold", req.get("similarity_threshold")),
         0.0,
         1.0,
         records[0].similarity_threshold,
     )
     vector_similarity_weight = _float_between(
-        req.get("vector_similarity_weight"),
+        search_config.get("vector_similarity_weight", req.get("vector_similarity_weight")),
         0.0,
         1.0,
         records[0].vector_similarity_weight,
     )
 
     kb = records[0]
+    tenant_ids = sorted({record.tenant_id for record in records})
     embd_mdl = LLMBundle(kb.tenant_id, kb.embd_id, lang=kb.language or "English")
     ranks = settings.retriever.retrieval(
         question,
         embd_mdl,
-        [kb.tenant_id],
+        tenant_ids,
         dataset_ids,
         page,
         size,
@@ -111,7 +126,7 @@ def search_datasets(user_id: str, req: dict[str, Any]):
         doc_ids=[str(value) for value in doc_ids] if doc_ids else [],
         top=top_k,
     )
-    ranks["chunks"] = settings.retriever.retrieval_by_children(ranks["chunks"], [kb.tenant_id])
+    ranks["chunks"] = settings.retriever.retrieval_by_children(ranks["chunks"], tenant_ids)
     ranks["labels"] = []
 
     for chunk in ranks["chunks"]:
@@ -136,19 +151,21 @@ def _float_between(value: Any, low: float, high: float, default: float) -> float
     return max(low, min(parsed, high))
 
 
-def _unsupported_retrieval_features(req: dict[str, Any]) -> list[str]:
+def _unsupported_retrieval_features(
+    req: dict[str, Any],
+    search_config: dict[str, Any] | None = None,
+) -> list[str]:
+    search_config = search_config or {}
     unsupported = []
-    if req.get("search_id"):
-        unsupported.append("search_id")
-    if req.get("rerank_id"):
+    if search_config.get("rerank_id") or req.get("rerank_id"):
         unsupported.append("rerank_id")
-    if req.get("use_kg"):
+    if search_config.get("use_kg") or req.get("use_kg"):
         unsupported.append("use_kg")
-    if req.get("keyword"):
+    if search_config.get("keyword") or req.get("keyword"):
         unsupported.append("keyword")
-    if req.get("cross_languages"):
+    if search_config.get("cross_languages") or req.get("cross_languages"):
         unsupported.append("cross_languages")
-    if _has_metadata_filter(req.get("meta_data_filter")):
+    if _has_metadata_filter(search_config.get("meta_data_filter") or req.get("meta_data_filter")):
         unsupported.append("meta_data_filter")
     return unsupported
 

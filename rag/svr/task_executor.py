@@ -12,7 +12,7 @@ from timeit import default_timer as timer
 
 import xxhash
 
-from api.db.db_models import init_database_tables
+from api.db.db_models import close_connection, init_database_tables
 from api.db.services.document_service import DocumentService
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.llm_service import LLMBundle
@@ -62,6 +62,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     init_database_tables()
+    close_connection()
     print(
         f"{CONSUMER_NAME} booted at {BOOT_AT}; waiting for {TASK_TYPE} document tasks.",
         flush=True,

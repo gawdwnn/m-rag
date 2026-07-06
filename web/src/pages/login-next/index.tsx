@@ -38,8 +38,6 @@ export function LoginPage() {
     }
     if (isRegister) {
       await registerMutation.mutateAsync({ email, password: rsaPassword, nickname });
-      switchMode('login');
-      return;
     } else {
       await loginMutation.mutateAsync({ email, password: rsaPassword });
     }

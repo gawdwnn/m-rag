@@ -17,7 +17,7 @@ const menuItems = [
   { path: Routes.Root, name: 'Home', icon: Home, enabled: true },
   { path: Routes.Datasets, name: 'Datasets', enabled: true },
   { path: Routes.Chats, name: 'Chat', enabled: false },
-  { path: Routes.Searches, name: 'Search', enabled: false },
+  { path: Routes.Searches, name: 'Search', enabled: true },
   { path: Routes.Agents, name: 'Agents', enabled: false },
   { path: Routes.Memories, name: 'Memories', enabled: false },
   { path: Routes.Files, name: 'Files', enabled: false },

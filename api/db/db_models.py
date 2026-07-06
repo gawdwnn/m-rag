@@ -12,6 +12,7 @@ from peewee import (
     DateTimeField,
     FloatField,
     IntegerField,
+    InterfaceError,
     Model,
     OperationalError,
     PrimaryKeyField,
@@ -23,7 +24,79 @@ from playhouse.mysql_ext import JSONField, MySQLConnectorDatabase
 from api.config import load_api_config
 from common import settings
 
-DB = MySQLConnectorDatabase(None)
+
+class RetryingMySQLConnectorDatabase(MySQLConnectorDatabase):
+    def __init__(self, *args, **kwargs):
+        self.max_retries = kwargs.pop("max_retries", 5)
+        self.retry_delay = kwargs.pop("retry_delay", 1)
+        super().__init__(*args, **kwargs)
+
+    def execute_sql(self, sql, params=None, commit=True):
+        for attempt in range(self.max_retries + 1):
+            try:
+                return super().execute_sql(sql, params, commit)
+            except (OperationalError, InterfaceError) as exc:
+                if _is_connection_loss(exc) and attempt < self.max_retries:
+                    logging.warning(
+                        "Database connection issue (attempt %s/%s): %s",
+                        attempt + 1,
+                        self.max_retries,
+                        exc,
+                    )
+                    self._handle_connection_loss()
+                    time.sleep(self.retry_delay * (2**attempt))
+                    continue
+                logging.error("DB execution failure: %s", exc)
+                raise
+        return None
+
+    def begin(self):
+        for attempt in range(self.max_retries + 1):
+            try:
+                return super().begin()
+            except (OperationalError, InterfaceError) as exc:
+                if _is_connection_loss(exc) and attempt < self.max_retries:
+                    logging.warning(
+                        "Lost connection during transaction (attempt %s/%s)",
+                        attempt + 1,
+                        self.max_retries,
+                    )
+                    self._handle_connection_loss()
+                    time.sleep(self.retry_delay * (2**attempt))
+                    continue
+                raise
+        return None
+
+    def _handle_connection_loss(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+        try:
+            self.connect()
+        except Exception as exc:
+            logging.error("Failed to reconnect: %s", exc)
+            time.sleep(0.1)
+            try:
+                self.connect()
+            except Exception as retry_exc:
+                logging.error("Failed to reconnect on second attempt: %s", retry_exc)
+                raise
+
+
+DB = RetryingMySQLConnectorDatabase(None)
+
+
+def _is_connection_loss(exc: Exception) -> bool:
+    error_codes = [2013, 2006, -1]
+    error_messages = ["", "Lost connection", "MySQL Connection not available"]
+    message = str(exc)
+    return (
+        (hasattr(exc, "args") and exc.args and exc.args[0] in error_codes)
+        or message in error_messages
+        or any(fragment in message for fragment in error_messages if fragment)
+        or (hasattr(exc, "__class__") and exc.__class__.__name__ == "InterfaceError")
+    )
 
 
 def connect_db() -> None:
@@ -44,6 +117,10 @@ def connect_db() -> None:
 def close_db() -> None:
     if not DB.is_closed():
         DB.close()
+
+
+def close_connection() -> None:
+    close_db()
 
 
 def init_database_tables() -> None:
@@ -202,6 +279,23 @@ class Tenant(BaseModel):
 
     class Meta:
         table_name = "tenant"
+
+
+class UserTenant(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    user_id = CharField(max_length=32, null=False, index=True)
+    tenant_id = CharField(max_length=32, null=False, index=True)
+    role = CharField(max_length=32, null=False, index=True)
+    invited_by = CharField(max_length=32, null=False, index=True)
+    status = CharField(max_length=1, null=True, default="1", index=True)
+    create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    create_date = DateTimeField(default=datetime.utcnow, index=True)
+    update_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    update_date = DateTimeField(default=datetime.utcnow, index=True)
+
+    class Meta:
+        table_name = "user_tenant"
+        indexes = ((("user_id", "tenant_id"), True),)
 
 
 class TenantLLM(BaseModel):
@@ -377,6 +471,60 @@ class File2Document(BaseModel):
 
     class Meta:
         table_name = "file2document"
+
+
+class Search(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    avatar = TextField(null=True)
+    tenant_id = CharField(max_length=32, null=False, index=True)
+    name = CharField(max_length=128, null=False, index=True)
+    description = TextField(null=True)
+    created_by = CharField(max_length=32, null=False, index=True)
+    search_config = JSONField(
+        null=False,
+        default={
+            "kb_ids": [],
+            "doc_ids": [],
+            "similarity_threshold": 0.2,
+            "vector_similarity_weight": 0.3,
+            "use_kg": False,
+            "rerank_id": "",
+            "top_k": 1024,
+            "summary": False,
+            "chat_id": "",
+            "llm_setting": {},
+            "chat_settingcross_languages": [],
+            "highlight": False,
+            "keyword": False,
+            "web_search": False,
+            "related_search": False,
+            "query_mindmap": False,
+        },
+    )
+    status = CharField(max_length=1, null=True, default="1", index=True)
+    create_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    create_date = DateTimeField(default=datetime.utcnow, index=True)
+    update_time = BigIntegerField(default=lambda: int(time.time() * 1000), index=True)
+    update_date = DateTimeField(default=datetime.utcnow, index=True)
+
+    class Meta:
+        table_name = "search"
+
+    def to_api(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "avatar": self.avatar or "",
+            "tenant_id": self.tenant_id,
+            "name": self.name,
+            "description": self.description or "",
+            "created_by": self.created_by,
+            "search_config": self.search_config or {},
+            "status": self.status,
+            "create_time": self.create_time,
+            "update_time": self.update_time,
+            "created_at": _timestamp_to_iso(self.create_time),
+            "updated_at": _timestamp_to_iso(self.update_time),
+        }
 
 
 class Task(BaseModel):

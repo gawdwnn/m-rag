@@ -1,17 +1,20 @@
 import React from 'react';
 import { Bot, MessageSquareText, Search } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Routes } from '@/routes';
 
 const options = [
-  { value: Routes.Chats, label: 'Chat', icon: MessageSquareText },
-  { value: Routes.Searches, label: 'Search', icon: Search },
-  { value: Routes.Agents, label: 'Agents', icon: Bot },
+  { value: Routes.Chats, label: 'Chat', icon: MessageSquareText, enabled: false },
+  { value: Routes.Searches, label: 'Search', icon: Search, enabled: true },
+  { value: Routes.Agents, label: 'Agents', icon: Bot, enabled: false },
 ];
 
 export function Applications() {
+  const navigate = useNavigate();
   const [value, setValue] = React.useState(Routes.Chats);
   const selected = options.find((option) => option.value === value) ?? options[0];
   const Icon = selected.icon;
@@ -44,9 +47,16 @@ export function Applications() {
       </header>
 
       <Card className="max-w-md">
-        <CardContent className="flex min-h-[96px] items-center gap-3 p-5 text-sm text-text-secondary">
-          <Icon className="size-5" />
-          <span>No {selected.label.toLowerCase()} yet.</span>
+        <CardContent className="flex min-h-[96px] items-center justify-between gap-3 p-5 text-sm text-text-secondary">
+          <div className="flex items-center gap-3">
+            <Icon className="size-5" />
+            <span>{selected.enabled ? 'Search Apps' : `No ${selected.label.toLowerCase()} yet.`}</span>
+          </div>
+          {selected.enabled ? (
+            <Button size="sm" onClick={() => navigate(selected.value)}>
+              Open
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     </section>

@@ -5,8 +5,8 @@ from uuid import uuid4
 
 from peewee import DoesNotExist
 
-from api.db.db_models import DB, Knowledgebase, connect_db
-from api.db.services.user_service import UserService
+from api.db.db_models import DB, Knowledgebase, User, connect_db
+from api.db.services.user_service import UserService, UserTenantService
 from common.constants import ParserType
 
 DEFAULT_PARSER_CONFIG = {
@@ -36,36 +36,33 @@ class KnowledgebaseService:
     @classmethod
     def list(cls, user_id: str) -> list[dict[str, Any]]:
         connect_db()
-        tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
-        user = UserService.get_active_user(user_id)
+        tenant_ids = UserTenantService.get_visible_tenant_ids(user_id)
         with DB.connection_context():
             records = (
-                cls.model.select()
+                cls.model.select(cls.model, User.nickname, User.avatar.alias("tenant_avatar"))
+                .join(User, on=(cls.model.tenant_id == User.id))
                 .where(
-                    (cls.model.tenant_id == tenant_id)
-                    & (cls.model.status == VALID_STATUS)
+                    cls._visibility_filter(tenant_ids, user_id)
                 )
                 .order_by(cls.model.create_time.desc(), cls.model.name.asc())
+                .dicts()
             )
-            return [_with_owner(record.to_api(), user) for record in records]
+            return [_from_joined_record(record) for record in records]
 
     @classmethod
     def get(cls, kb_id: str, user_id: str) -> dict[str, Any]:
-        return _with_owner(
-            cls.get_record(kb_id, user_id).to_api(),
-            UserService.get_active_user(user_id),
-        )
+        record = cls.get_record(kb_id, user_id)
+        return _with_owner(record.to_api(), _get_user(record.tenant_id))
 
     @classmethod
     def get_record(cls, kb_id: str, user_id: str) -> Knowledgebase:
         connect_db()
-        tenant_id = UserService.get_tenant_defaults(user_id)["tenant_id"]
+        tenant_ids = UserTenantService.get_visible_tenant_ids(user_id)
         with DB.connection_context():
             try:
                 return cls.model.get(
                     (cls.model.id == kb_id)
-                    & (cls.model.tenant_id == tenant_id)
-                    & (cls.model.status == VALID_STATUS)
+                    & cls._visibility_filter(tenant_ids, user_id)
                 )
             except DoesNotExist as exc:
                 raise KnowledgebaseNotFound(kb_id) from exc
@@ -148,6 +145,19 @@ class KnowledgebaseService:
         if deleted == 0:
             raise KnowledgebaseNotFound(",".join(kb_ids))
 
+    @classmethod
+    def _visibility_filter(cls, tenant_ids: list[str], user_id: str):
+        return (
+            (
+                (cls.model.tenant_id == user_id)
+                | (
+                    (cls.model.tenant_id.in_(tenant_ids))
+                    & (cls.model.permission == "team")
+                )
+            )
+            & (cls.model.status == VALID_STATUS)
+        )
+
 
 def _normalize_payload(payload: dict[str, Any], tenant_defaults: dict[str, Any]) -> dict[str, Any]:
     name = str(payload.get("name", "")).strip()
@@ -191,6 +201,41 @@ def _with_owner(data: dict[str, Any], user: Any) -> dict[str, Any]:
         "nickname": getattr(user, "nickname", "") or data.get("created_by", ""),
         "tenant_avatar": getattr(user, "avatar", "") or "",
     }
+
+
+def _from_joined_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": record["id"],
+        "tenant_id": record["tenant_id"],
+        "name": record["name"],
+        "language": record.get("language") or "English",
+        "description": record.get("description") or "",
+        "embedding_model": record["embd_id"],
+        "permission": record["permission"],
+        "created_by": record["created_by"],
+        "chunk_method": record["parser_id"],
+        "parser_config": record["parser_config"],
+        "document_count": int(record["doc_num"]),
+        "token_num": int(record["token_num"]),
+        "chunk_count": int(record["chunk_num"]),
+        "status": record["status"],
+        "avatar": record.get("avatar") or "",
+        "update_time": record["update_time"],
+        "created_at": _timestamp_to_iso(record["create_time"]),
+        "updated_at": _timestamp_to_iso(record["update_time"]),
+        "nickname": record.get("nickname") or record["created_by"],
+        "tenant_avatar": record.get("tenant_avatar") or "",
+    }
+
+
+def _get_user(user_id: str) -> Any:
+    return UserService.get_active_user(user_id)
+
+
+def _timestamp_to_iso(value: int | None) -> str:
+    if not value:
+        return ""
+    return datetime.fromtimestamp(value / 1000).isoformat()
 
 
 def _normalize_permission(value: Any) -> str:

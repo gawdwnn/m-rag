@@ -71,6 +71,10 @@ const routeConfigOptions: LazyRouteConfig[] = [
     Component: () => import('@/pages/document-viewer'),
   },
   {
+    path: `${Routes.Search}/:id`,
+    Component: () => import('@/pages/next-search'),
+  },
+  {
     path: '/*',
     Component: () => import('@/pages/404'),
   },
@@ -101,6 +105,10 @@ const routeConfigOptions: LazyRouteConfig[] = [
       {
         path: Routes.Datasets,
         Component: () => import('@/pages/datasets'),
+      },
+      {
+        path: Routes.Searches,
+        Component: () => import('@/pages/next-searches'),
       },
       {
         path: Routes.DatasetBase,

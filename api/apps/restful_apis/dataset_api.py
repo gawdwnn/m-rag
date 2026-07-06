@@ -36,7 +36,10 @@ async def create():
 @login_required
 async def search_datasets():
     req = await request.get_json(silent=True) or {}
-    if not isinstance(req.get("dataset_ids"), list) or not req.get("dataset_ids"):
+    if (
+        not str(req.get("search_id") or "").strip()
+        and (not isinstance(req.get("dataset_ids"), list) or not req.get("dataset_ids"))
+    ):
         return get_error_argument_result("dataset_ids is required.")
     if not str(req.get("question") or "").strip():
         return get_error_argument_result("question is required.")

@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useIsMutating,
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useState } from 'react';
 
 import type {
@@ -70,9 +76,31 @@ const initialRetrievalData: RetrievalTestResponse & { isRuned: boolean } = {
   total: 0,
   chunks: [],
   doc_aggs: [],
+  documents: [],
   labels: [],
   isRuned: false,
 };
+
+export function useChunkIsTesting() {
+  return useIsMutating({ mutationKey: ['testChunk'] }) > 0;
+}
+
+export function useSelectTestingResult(): RetrievalTestResponse & { isRuned: boolean } {
+  const data = useMutationState({
+    filters: { mutationKey: ['testChunk'] },
+    select: (mutation) => mutation.state.data as RetrievalTestResponse | undefined,
+  });
+  const result = data.at(-1);
+  return result ? { ...result, isRuned: true } : initialRetrievalData;
+}
+
+export function useAllTestingResult(): RetrievalTestResponse {
+  const data = useMutationState({
+    filters: { mutationKey: ['testChunkAll'] },
+    select: (mutation) => mutation.state.data as RetrievalTestResponse | undefined,
+  });
+  return data.at(-1) ?? initialRetrievalData;
+}
 
 export function useTestRetrieval(datasetId: string | null) {
   const [values, setValues] = useState<RetrievalTestInput>({
