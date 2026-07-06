@@ -73,6 +73,7 @@ export async function retrievalTest(
     {
       method: 'POST',
       data: input,
+      timeoutMs: 30000,
     },
   );
 }

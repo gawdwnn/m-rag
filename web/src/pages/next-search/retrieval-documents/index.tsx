@@ -1,143 +1,115 @@
-import { ExternalLink } from 'lucide-react';
+import { ChevronDown, Files, X } from 'lucide-react';
+import { useEffect, useState, type MouseEvent } from 'react';
 
-import Empty from '@/components/empty/empty';
-import { EmptyType } from '@/components/empty/constant';
-import { FilterButton } from '@/components/list-filter-bar';
-import { FilterPopover } from '@/components/list-filter-bar/filter-popover';
-import type { FilterCollection } from '@/components/list-filter-bar/interface';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { RAGPagination } from '@/components/ui/rag-pagination';
-import type { RetrievalChunk, RetrievalTestResponse } from '@/pages/datasets/types';
-import { Routes } from '@/routes';
-import { getExtension } from '@/utils/file-util';
-
-const similarityList: Array<{ field: keyof RetrievalChunk; label: string }> = [
-  { field: 'similarity', label: 'Hybrid similarity' },
-  { field: 'term_similarity', label: 'Term similarity' },
-  { field: 'vector_similarity', label: 'Vector similarity' },
-];
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
+import {
+  useAllTestingResult,
+  useChunkIsTesting,
+  useSelectTestingResult,
+} from '@/hooks/use-knowledge-request';
 
 type RetrievalDocumentsProps = {
-  data: RetrievalTestResponse & { isRuned: boolean };
-  filterValue: { doc_ids: string[] };
-  page: number;
-  pageSize: number;
-  loading: boolean;
-  error: Error | null;
-  handleFilterSubmit: (docIds: string[]) => void;
-  onPaginationChange: (page: number) => void;
+  selectedDocumentIds: string[];
+  onTesting: (documentIds: string[]) => void;
+  setSelectedDocumentIds: (documentIds: string[]) => void;
+  setLoading?: (loading: boolean) => void;
 };
 
-export function RetrievalDocuments({
-  data,
-  filterValue,
-  page,
-  pageSize,
-  loading,
-  error,
-  handleFilterSubmit,
-  onPaginationChange,
+export default function RetrievalDocuments({
+  selectedDocumentIds,
+  onTesting,
+  setSelectedDocumentIds,
+  setLoading,
 }: RetrievalDocumentsProps) {
-  const filters: FilterCollection[] = [
-    {
-      field: 'doc_ids',
-      label: 'File',
-      list: data.doc_aggs.map((doc) => ({
-        id: doc.doc_id,
-        label: doc.doc_name,
-        count: doc.count,
-      })),
-    },
-  ];
+  const { documents: allDocuments } = useAllTestingResult();
+  const { documents: currentDocuments } = useSelectTestingResult();
+  const isTesting = useChunkIsTesting();
+  const documents =
+    allDocuments.length > currentDocuments.length ? allDocuments : currentDocuments;
+  const [selectedValues, setSelectedValues] = useState<string[]>(selectedDocumentIds);
+
+  useEffect(() => {
+    setLoading?.(isTesting);
+  }, [isTesting, setLoading]);
+
+  useEffect(() => {
+    setSelectedValues(selectedDocumentIds);
+  }, [selectedDocumentIds]);
+
+  if (documents.length === 0) {
+    return null;
+  }
+
+  function updateSelection(nextValues: string[]) {
+    setSelectedValues(nextValues);
+    setSelectedDocumentIds(nextValues);
+    onTesting(nextValues);
+  }
+
+  function toggleDocument(documentId: string) {
+    const nextValues = selectedValues.includes(documentId)
+      ? selectedValues.filter((value) => value !== documentId)
+      : [...selectedValues, documentId];
+    updateSelection(nextValues);
+  }
+
+  function clearSelection(event?: MouseEvent<SVGSVGElement>) {
+    event?.stopPropagation();
+    updateSelection([]);
+  }
 
   return (
-    <article className="flex size-full flex-col">
-      <header className="flex flex-0 items-center justify-between px-5 py-3">
-        <h2 className="text-base leading-8 font-semibold">Results</h2>
-        <FilterPopover
-          filters={filters}
-          onChange={handleFilterSubmit}
-          value={filterValue}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className="flex min-h-10 w-full items-center justify-between rounded-md border border-border-button bg-inherit p-1 text-base text-text-primary hover:bg-inherit [&_svg]:pointer-events-auto"
+          type="button"
+          variant="ghost"
         >
-          <FilterButton />
-        </FilterPopover>
-      </header>
-
-      <div className="h-0 flex-1">
-        {error ? (
-          <div className="p-5 text-sm text-state-error">{error.message}</div>
-        ) : null}
-
-        {loading ? (
-          <div className="grid size-full place-items-center text-sm text-text-secondary">
-            Loading...
-          </div>
-        ) : data.chunks.length > 0 ? (
-          <>
-            <section className="scrollbar-thin flex h-full flex-col gap-5 overflow-auto px-5 pb-5">
-              {data.chunks.map((chunk) => (
-                <article key={chunk.chunk_id}>
-                  <Card className="bg-transparent px-5 py-2.5 shadow-none">
-                    <ChunkTitle item={chunk} />
-                    <p className="!mt-2.5 whitespace-pre-wrap text-sm leading-6">
-                      {chunk.content_with_weight}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between gap-4 text-xs text-text-secondary">
-                      <p className="min-w-0 truncate">{chunk.docnm_kwd}</p>
-                      <Button
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          window.open(
-                            `${Routes.Document}/${chunk.doc_id}?ext=${getExtension(chunk.docnm_kwd)}`,
-                            '_blank',
-                            'noopener,noreferrer',
-                          );
-                        }}
-                      >
-                        <ExternalLink />
-                        Source
-                      </Button>
-                    </div>
-                  </Card>
-                </article>
-              ))}
-            </section>
-
-            <RAGPagination
-              current={page}
-              onChange={onPaginationChange}
-              pageSize={pageSize}
-              total={data.total}
+          <span className="flex min-w-0 items-center gap-2">
+            <Files className="size-4 shrink-0" />
+            <span>
+              {selectedValues.length}/{documents.length}
+            </span>
+            <span>Files</span>
+          </span>
+          <span className="flex items-center">
+            <X
+              className="mx-2 size-4 cursor-pointer text-muted-foreground"
+              onClick={clearSelection}
             />
-          </>
-        ) : (
-          <div className="flex size-full items-center justify-center p-5">
-            <Empty type={EmptyType.SearchData}>
-              <div className="text-sm text-text-secondary">
-                {data.isRuned
-                  ? 'No relevant results found. Try adjusting the query or saved settings.'
-                  : 'Run a search to inspect retrieved chunks.'}
-              </div>
-            </Empty>
-          </div>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function ChunkTitle({ item }: { item: RetrievalChunk }) {
-  return (
-    <div className="space-x-4 text-xs text-text-secondary italic">
-      {similarityList.map((score) => (
-        <p key={score.field} className="inline">
-          {((Number(item[score.field]) || 0) * 100).toFixed(2)}{' '}
-          <dfn>{score.label}</dfn>
-        </p>
-      ))}
-    </div>
+            <Separator orientation="vertical" className="min-h-6" />
+            <ChevronDown className="mx-2 size-4 text-muted-foreground" />
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-72">
+        <DropdownMenuCheckboxItem
+          checked={selectedValues.length === 0}
+          onCheckedChange={() => updateSelection([])}
+        >
+          All files
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        {documents.map((document) => (
+          <DropdownMenuCheckboxItem
+            checked={selectedValues.includes(document.doc_id)}
+            key={document.doc_id}
+            onCheckedChange={() => toggleDocument(document.doc_id)}
+          >
+            <span className="min-w-0 flex-1 truncate">{document.doc_name}</span>
+            <span className="ml-auto text-xs text-text-secondary">{document.count}</span>
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

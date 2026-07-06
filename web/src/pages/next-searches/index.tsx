@@ -2,8 +2,9 @@ import { Plus, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import Empty from '@/components/empty/empty';
-import { EmptyType } from '@/components/empty/constant';
+import { CardContainer } from '@/components/card-container';
+import { EmptyAppCard } from '@/components/empty/empty';
+import { EmptyCardType } from '@/components/empty/constant';
 import ListFilterBar from '@/components/list-filter-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,75 +61,100 @@ export default function SearchList() {
   }
 
   return (
-    <article className="flex size-full flex-col" data-testid="search-list">
-      <header className="px-5 pt-8 mb-4">
-        <ListFilterBar
-          leftPanel={
+    <>
+      {searchApps.length || isSearching ? (
+        <article className="flex size-full flex-col" data-testid="search-list">
+          <header className="mb-4 px-5 pt-8">
+            <ListFilterBar
+              leftPanel={
+                <>
+                  <Search className="size-6" />
+                  Search Apps
+                </>
+              }
+              preChildren={
+                <Input
+                  className="h-9 w-64"
+                  placeholder="Search"
+                  value={listQuery.searchString}
+                  onChange={(event) => listQuery.handleInputChange(event.currentTarget.value)}
+                />
+              }
+            >
+              <Button
+                data-testid="create-search"
+                onClick={() => {
+                  setEditingSearch(null);
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus className="size-[1em]" />
+                Create Search
+              </Button>
+            </ListFilterBar>
+          </header>
+
+          {listQuery.isLoading ? (
+            <p className="px-5 text-sm text-text-secondary">Loading...</p>
+          ) : listQuery.error ? (
+            <p className="px-5 text-sm text-state-error">{listQuery.error.message}</p>
+          ) : searchApps.length > 0 ? (
             <>
-              <Search className="size-6" />
-              Search Apps
+              <CardContainer className="flex-1 overflow-auto px-5">
+                {searchApps.map((search) => (
+                  <SearchCard
+                    key={search.id}
+                    data={search}
+                    onDelete={onDelete}
+                    onRename={(nextSearch) => {
+                      setEditingSearch(nextSearch);
+                      setDialogOpen(true);
+                    }}
+                  />
+                ))}
+              </CardContainer>
+              <footer className="mt-4 px-5 pb-5">
+                <RAGPagination
+                  current={listQuery.pagination.page}
+                  pageSize={listQuery.pagination.pageSize}
+                  total={listQuery.data.total}
+                  onChange={(page) =>
+                    listQuery.setPagination((current) => ({ ...current, page }))
+                  }
+                />
+              </footer>
             </>
-          }
-          preChildren={
-            <Input
-              className="h-9 w-64"
-              placeholder="Search"
-              value={listQuery.searchString}
-              onChange={(event) => listQuery.handleInputChange(event.currentTarget.value)}
-            />
-          }
+          ) : (
+            <div className="flex flex-1 items-center justify-center">
+              <EmptyAppCard
+                showIcon
+                size="large"
+                className="w-[480px] p-14"
+                isSearch
+                type={EmptyCardType.Search}
+                testId="search-empty-create"
+              />
+            </div>
+          )}
+        </article>
+      ) : (
+        <article
+          className="flex size-full items-center justify-center"
+          data-testid="search-list"
         >
-          <Button
-            data-testid="create-search"
+          <EmptyAppCard
+            showIcon
+            size="large"
+            className="w-[480px] p-14"
+            type={EmptyCardType.Search}
             onClick={() => {
               setEditingSearch(null);
               setDialogOpen(true);
             }}
+            testId="search-empty-create"
           >
-            <Plus />
-            Create Search
-          </Button>
-        </ListFilterBar>
-      </header>
-
-      {listQuery.isLoading ? (
-        <p className="px-5 text-sm text-text-secondary">Loading...</p>
-      ) : listQuery.error ? (
-        <p className="px-5 text-sm text-state-error">{listQuery.error.message}</p>
-      ) : searchApps.length > 0 ? (
-        <>
-          <section className="grid flex-1 grid-cols-1 gap-4 overflow-auto px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
-            {searchApps.map((search) => (
-              <SearchCard
-                key={search.id}
-                data={search}
-                onDelete={onDelete}
-                onRename={(nextSearch) => {
-                  setEditingSearch(nextSearch);
-                  setDialogOpen(true);
-                }}
-              />
-            ))}
-          </section>
-          <RAGPagination
-            current={listQuery.pagination.page}
-            pageSize={listQuery.pagination.pageSize}
-            total={listQuery.data.total}
-            onChange={(page) =>
-              listQuery.setPagination((current) => ({ ...current, page }))
-            }
-          />
-        </>
-      ) : (
-        <div className="flex flex-1 items-center justify-center p-5">
-          <Empty type={EmptyType.SearchData}>
-            <div className="text-sm text-text-secondary">
-              {isSearching
-                ? 'No matching Search Apps.'
-                : 'Create a Search App to save retrieval settings.'}
-            </div>
-          </Empty>
-        </div>
+          </EmptyAppCard>
+        </article>
       )}
 
       <SearchCreatingDialog
@@ -141,6 +167,6 @@ export default function SearchList() {
         }}
         onOk={onCreateOrRename}
       />
-    </article>
+    </>
   );
 }

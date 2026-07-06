@@ -1,16 +1,34 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Routes } from '@/routes';
 import { useFetchSearchDetail, useUpdateSearchSetting } from './hooks';
+import { SearchHome } from './search-home';
 import { SearchSetting } from './search-setting';
-import { SearchView } from './search-view';
+import SearchingPage from './searching';
 
 export default function NextSearch() {
   const { id } = useParams();
   const searchQuery = useFetchSearchDetail(id);
   const updateSearch = useUpdateSearchSetting(id);
+  const [isSearching, setIsSearching] = useState(false);
+  const [openSetting, setOpenSetting] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const canSearch = Boolean(searchQuery.data?.search_config.kb_ids?.length);
+
+  useEffect(() => {
+    if (searchQuery.data) {
+      setOpenSetting(!canSearch);
+    }
+  }, [canSearch, searchQuery.data]);
+
+  useEffect(() => {
+    if (isSearching) {
+      setOpenSetting(false);
+    }
+  }, [isSearching]);
 
   if (!id) {
     return <Navigate to={Routes.Searches} replace />;
@@ -35,29 +53,65 @@ export default function NextSearch() {
   const search = searchQuery.data;
 
   return (
-    <main className="flex h-dvh bg-bg-base text-text-primary">
-      <SearchSetting
-        search={search}
-        loading={updateSearch.isPending}
-        onSave={(input) =>
-          updateSearch.mutateAsync({
-            name: input.name,
-            description: input.description,
-            search_config: input.search_config,
-          })
-        }
-      />
-      <section className="flex h-full min-w-0 flex-1 flex-col">
-        <nav className="flex h-14 items-center border-b border-border-button px-5">
-          <Button asChild variant="ghost" size="sm">
-            <Link to={Routes.Searches}>
-              <ArrowLeft />
-              Search Apps
-            </Link>
-          </Button>
-        </nav>
-        <SearchView search={search} />
+    <main
+      className="relative flex h-dvh min-h-0 flex-1 overflow-hidden bg-bg-card px-5 pb-5 pt-4 text-text-primary"
+      data-testid="search-detail"
+    >
+      <section className="flex min-h-0 flex-1 gap-3 border border-border-button bg-bg-base">
+        <div className="min-w-0 flex-1">
+          {!isSearching ? (
+            <SearchHome
+              canSearch={canSearch}
+              isSearching={isSearching}
+              onOpenSetting={() => setOpenSetting(true)}
+              searchText={searchText}
+              setIsSearching={setIsSearching}
+              setSearchText={setSearchText}
+            />
+          ) : (
+            <SearchingPage
+              search={search}
+              searchText={searchText}
+              setIsSearching={setIsSearching}
+              setSearchText={setSearchText}
+            />
+          )}
+        </div>
+
+        {openSetting ? (
+          <SearchSetting
+            loading={updateSearch.isPending}
+            onClose={() => setOpenSetting(false)}
+            onSave={(input) =>
+              updateSearch.mutateAsync({
+                name: input.name,
+                description: input.description,
+                search_config: input.search_config,
+              })
+            }
+            search={search}
+          />
+        ) : null}
       </section>
+
+      <div className="ml-5 flex flex-col gap-2">
+        <Button asChild className="bg-bg-base" size="icon" variant="outline">
+          <Link to={Routes.Searches}>
+            <ArrowLeft className="text-text-secondary" />
+            <span className="sr-only">Back to Search Apps</span>
+          </Link>
+        </Button>
+        <Button
+          className="bg-bg-base"
+          onClick={() => setOpenSetting((current) => !current)}
+          size="icon"
+          type="button"
+          variant="outline"
+        >
+          <Settings className="text-text-secondary" />
+          <span className="sr-only">Search settings</span>
+        </Button>
+      </div>
     </main>
   );
 }

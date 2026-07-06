@@ -8,6 +8,7 @@ type RequestOptions = {
   method?: string;
   data?: unknown;
   params?: Record<string, string | number | boolean | undefined>;
+  timeoutMs?: number;
 };
 
 type ApiData<T> = {
@@ -66,11 +67,28 @@ async function requestWithResponse<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(withParams(url, options.params), {
-    method: options.method ?? 'GET',
-    headers,
-    body,
-  });
+  const controller = options.timeoutMs ? new AbortController() : undefined;
+  const timeoutId = options.timeoutMs
+    ? window.setTimeout(() => controller?.abort(), options.timeoutMs)
+    : undefined;
+  let response: Response;
+  try {
+    response = await fetch(withParams(url, options.params), {
+      method: options.method ?? 'GET',
+      headers,
+      body,
+      signal: controller?.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Request timed out. Check API and Elasticsearch logs.');
+    }
+    throw error;
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 
   if (response.status === 204) {
     return { data: { code: 0, data: undefined as T }, response };

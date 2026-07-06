@@ -27,7 +27,8 @@ export default {
   deleteSearch: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
   getSearchDetail: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
   updateSearchSetting: (searchId: string) => `${restAPIv1}/searches/${searchId}`,
-  askSearch: (searchId: string) => `${restAPIv1}/searches/${searchId}/completions`,
+  searchCompletion: (searchId: string) =>
+    `${restAPIv1}/searches/${searchId}/completions`,
   documentPreview: (documentId: string) =>
     `${restAPIv1}/documents/${documentId}/preview`,
   getDatasetDocumentFileDownload: (datasetId: string, documentId: string) =>

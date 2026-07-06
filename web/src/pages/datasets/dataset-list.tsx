@@ -1,3 +1,4 @@
+import { CardContainer } from '@/components/card-container';
 import { EmptyAppCard } from '@/components/empty/empty';
 import { EmptyCardType } from '@/components/empty/constant';
 import { HomeCard } from '@/components/home-card';
@@ -8,6 +9,7 @@ import type { Knowledgebase } from './types';
 type DatasetListProps = {
   datasets: Knowledgebase[];
   isLoading: boolean;
+  isSearching?: boolean;
   onCreate: () => void;
   onSelect: (dataset: Knowledgebase) => void;
   onDelete: (dataset: Knowledgebase) => Promise<void>;
@@ -16,6 +18,7 @@ type DatasetListProps = {
 export function DatasetList({
   datasets,
   isLoading,
+  isSearching,
   onCreate,
   onSelect,
   onDelete,
@@ -31,6 +34,7 @@ export function DatasetList({
           showIcon
           size="large"
           className="w-[480px] p-14"
+          isSearch={isSearching}
           type={EmptyCardType.Dataset}
           onClick={onCreate}
         />
@@ -39,7 +43,7 @@ export function DatasetList({
   }
 
   return (
-    <section className="grid flex-1 grid-cols-1 gap-4 overflow-auto px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
+    <CardContainer className="flex-1 overflow-auto px-5">
       {datasets.map((dataset) => (
         <DatasetCard
           key={dataset.id}
@@ -48,7 +52,7 @@ export function DatasetList({
           onDelete={onDelete}
         />
       ))}
-    </section>
+    </CardContainer>
   );
 }
 

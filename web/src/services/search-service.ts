@@ -1,8 +1,6 @@
 import type {
   CreateSearchInput,
   SearchApp,
-  SearchCompletionInput,
-  SearchCompletionResponse,
   SearchListResponse,
   UpdateSearchInput,
 } from '@/pages/searches/types';
@@ -41,15 +39,5 @@ export async function updateSearch(
 export async function deleteSearch(searchId: string): Promise<boolean> {
   return request<boolean>(api.deleteSearch(searchId), {
     method: 'DELETE',
-  });
-}
-
-export async function askSearch(
-  searchId: string,
-  input: SearchCompletionInput,
-): Promise<SearchCompletionResponse> {
-  return request<SearchCompletionResponse>(api.askSearch(searchId), {
-    method: 'POST',
-    data: input,
   });
 }

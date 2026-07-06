@@ -53,9 +53,7 @@ export type UpdateSearchInput = {
   search_config: Partial<SearchConfig>;
 };
 
-export type SearchCompletionInput = Pick<
+export type SearchRetrievalInput = Pick<
   RetrievalTestInput,
   'question' | 'page' | 'size' | 'doc_ids'
 >;
-
-export type SearchCompletionResponse = RetrievalTestResponse;

@@ -12,6 +12,7 @@ from peewee import (
     DateTimeField,
     FloatField,
     IntegerField,
+    InterfaceError,
     Model,
     OperationalError,
     PrimaryKeyField,
@@ -23,7 +24,79 @@ from playhouse.mysql_ext import JSONField, MySQLConnectorDatabase
 from api.config import load_api_config
 from common import settings
 
-DB = MySQLConnectorDatabase(None)
+
+class RetryingMySQLConnectorDatabase(MySQLConnectorDatabase):
+    def __init__(self, *args, **kwargs):
+        self.max_retries = kwargs.pop("max_retries", 5)
+        self.retry_delay = kwargs.pop("retry_delay", 1)
+        super().__init__(*args, **kwargs)
+
+    def execute_sql(self, sql, params=None, commit=True):
+        for attempt in range(self.max_retries + 1):
+            try:
+                return super().execute_sql(sql, params, commit)
+            except (OperationalError, InterfaceError) as exc:
+                if _is_connection_loss(exc) and attempt < self.max_retries:
+                    logging.warning(
+                        "Database connection issue (attempt %s/%s): %s",
+                        attempt + 1,
+                        self.max_retries,
+                        exc,
+                    )
+                    self._handle_connection_loss()
+                    time.sleep(self.retry_delay * (2**attempt))
+                    continue
+                logging.error("DB execution failure: %s", exc)
+                raise
+        return None
+
+    def begin(self):
+        for attempt in range(self.max_retries + 1):
+            try:
+                return super().begin()
+            except (OperationalError, InterfaceError) as exc:
+                if _is_connection_loss(exc) and attempt < self.max_retries:
+                    logging.warning(
+                        "Lost connection during transaction (attempt %s/%s)",
+                        attempt + 1,
+                        self.max_retries,
+                    )
+                    self._handle_connection_loss()
+                    time.sleep(self.retry_delay * (2**attempt))
+                    continue
+                raise
+        return None
+
+    def _handle_connection_loss(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+        try:
+            self.connect()
+        except Exception as exc:
+            logging.error("Failed to reconnect: %s", exc)
+            time.sleep(0.1)
+            try:
+                self.connect()
+            except Exception as retry_exc:
+                logging.error("Failed to reconnect on second attempt: %s", retry_exc)
+                raise
+
+
+DB = RetryingMySQLConnectorDatabase(None)
+
+
+def _is_connection_loss(exc: Exception) -> bool:
+    error_codes = [2013, 2006, -1]
+    error_messages = ["", "Lost connection", "MySQL Connection not available"]
+    message = str(exc)
+    return (
+        (hasattr(exc, "args") and exc.args and exc.args[0] in error_codes)
+        or message in error_messages
+        or any(fragment in message for fragment in error_messages if fragment)
+        or (hasattr(exc, "__class__") and exc.__class__.__name__ == "InterfaceError")
+    )
 
 
 def connect_db() -> None:
@@ -39,27 +112,15 @@ def connect_db() -> None:
         )
     if DB.is_closed():
         DB.connect(reuse_if_open=True)
-        return
-
-    try:
-        connection = DB.connection()
-        ping = getattr(connection, "ping", None)
-        if callable(ping):
-            ping(reconnect=True, attempts=1, delay=0)
-        else:
-            DB.execute_sql("SELECT 1")
-    except Exception:
-        logging.warning("Database connection is stale; reconnecting.", exc_info=True)
-        try:
-            DB.close()
-        except Exception:
-            logging.exception("Failed to close stale database connection.")
-        DB.connect(reuse_if_open=True)
 
 
 def close_db() -> None:
     if not DB.is_closed():
         DB.close()
+
+
+def close_connection() -> None:
+    close_db()
 
 
 def init_database_tables() -> None:
